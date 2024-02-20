@@ -9,7 +9,7 @@ from torch.nn import functional as F
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 
-from src.sepsis.transformer_model import TransformerModel
+from src.multi_channel_transformer.multi_channel_transformer import MultiChannelTransformerClassifier
 
 data_directory = "data/challenge-2019/processed_samples"  # Replace with the actual path to your data directory
 data = {}
@@ -62,16 +62,16 @@ learning_rate = 1e-4
 weight_decay = 0.01
 hidden_dim = 256
 num_layers = 3
-num_heads = 4
+num_heads = 1
 batch_size = 10
 num_epochs = 1_000
 eval_interval = 100
 eval_iters = 100
-early_stop_iters = 100
+early_stop_iters = 10
 torch.manual_seed(6469)
 
 # Create the model
-model = TransformerModel(input_dim, output_dim, hidden_dim, num_layers, num_heads)
+model = MultiChannelTransformerClassifier(input_dim,1, output_dim, 40, num_layers, num_heads)
 model.to(device)
 
 # Define loss function and optimizer
@@ -161,4 +161,4 @@ for epoch in range(num_epochs):
     optimizer.step()
 
 # Save the trained model
-torch.save(model.state_dict(), "transformer_model_large-1000_l_3e4_adamw_val_stop.pth")
+torch.save(model.state_dict(), "multi_transformer_model_large-1000_l_3e4_adamw_val_stop.pth")
