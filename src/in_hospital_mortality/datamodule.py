@@ -60,10 +60,10 @@ class InHospitalMortalityDataModule(L.LightningDataModule):
                 if (start_row + size) >= len(series) - 1:
                     left_index = len(series) - 1 - size
                     assert left_index + size == len(series) - 1
-                    yield series[left_index : left_index + size]
+                    yield series[left_index: left_index + size]
                     break
                 else:
-                    yield series[start_row : start_row + size]
+                    yield series[start_row: start_row + size]
 
         def one_hot_encode(df, column, num_classes):
             one_hot_encoded_tensor = torch.nn.functional.one_hot(
@@ -92,9 +92,9 @@ class InHospitalMortalityDataModule(L.LightningDataModule):
             ].map(gcs_verbal_mapping)
 
             episode["Glascow coma scale total"] = (
-                episode["Glascow coma scale eye opening"]
-                + episode["Glascow coma scale motor response"]
-                + episode["Glascow coma scale verbal response"]
+                    episode["Glascow coma scale eye opening"]
+                    + episode["Glascow coma scale motor response"]
+                    + episode["Glascow coma scale verbal response"]
             )
 
             episode = episode.fillna(0)
@@ -109,6 +109,7 @@ class InHospitalMortalityDataModule(L.LightningDataModule):
             #     print(episode)
 
             windows = [window for window in sliding_window_iter(episode, 48)]
+            windows = [windows[0]]
 
             for index, window in enumerate(windows):
                 if len(window) < 48:
