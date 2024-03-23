@@ -3,7 +3,7 @@ from torch import nn
 
 class FeedForward(nn.Module):
     def __init__(
-            self, input_dimension, hidden_dim, hidden_layers, output_dim, dropout=0.5
+        self, input_dimension, hidden_dim, hidden_layers, output_dim, dropout=0.5
     ):
         super().__init__()
         layers = []

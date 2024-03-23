@@ -152,8 +152,8 @@ items_to_keep = (
         [
             int(itemid)
             for itemid in pd.read_csv(args.itemids_file, header=0, index_col=None)[
-            "ITEMID"
-        ].unique()
+                "ITEMID"
+            ].unique()
         ]
     )
     if args.itemids_file

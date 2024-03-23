@@ -116,13 +116,13 @@ class MultiChannelTransformerEncoder(nn.Module):
 
 class MultiChannelTransformerClassifier(nn.Module):
     def __init__(
-            self,
-            channel_dimension,
-            channel_hidden_dimension,
-            output_dim,
-            number_of_channels,
-            number_of_layers,
-            number_of_heads,
+        self,
+        channel_dimension,
+        channel_hidden_dimension,
+        output_dim,
+        number_of_channels,
+        number_of_layers,
+        number_of_heads,
     ):
         super(MultiChannelTransformerClassifier, self).__init__()
         self.channel_wise_embedding = nn.ModuleList(
