@@ -6,9 +6,10 @@ import torch.utils.data
 
 
 class InHospitalMortalityDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir: str, list_file_path: str, one_hot: bool):
+    def __init__(self, data_dir: str, list_file_path: str, one_hot: bool, normalize: bool):
         self.data_dir = data_dir
         self.one_hot = one_hot
+        self.normalize = normalize
         listfile = np.loadtxt(
             os.path.join(self.data_dir, list_file_path),
             delimiter=",",
@@ -83,6 +84,11 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
         # Set "Hours" as index again
         episode.set_index("Hours", inplace=True)
 
+        if self.normalize:
+            for column in episode.columns:
+                if column in means and column in stds:
+                    episode[column] = (episode[column] - means[column]) / stds[column]
+
         episode = episode.fillna(0)
         if self.one_hot:
             episode = one_hot_encode(episode, "Capillary refill rate", 2)
@@ -133,3 +139,40 @@ gcs_motor_mapping = {
     "Localizes Pain": 5,
     "Obeys Commands": 6,
 }
+
+stds = dict(
+    [
+        ("Hours", 14.396261767527724),
+        ("Diastolic blood pressure", 285.80064177699705),
+        ("Fraction inspired oxygen", 0.1961013042470289),
+        ("Glucose", 9190.367721597377),
+        ("Heart Rate", 132.41586088485442),
+        ("Height", 12.332785645604897),
+        ("Mean blood pressure", 266.45492092726295),
+        ("Oxygen saturation", 2094.753594800329),
+        ("Respiratory rate", 2025.1666030044469),
+        ("Systolic blood pressure", 882.396478974552),
+        ("Temperature", 12.879852903644485),
+        ("Weight", 95.5778654729231),
+        ("pH", 11110.745176079576),
+    ]
+)
+
+means = dict(
+    [
+        ("Hours", 22.028152722731797),
+        ("Diastolic blood pressure", 63.40139620838688),
+        ("Fraction inspired oxygen", 0.5220774309673805),
+        ("Glucose", 233.5193111471457),
+        ("Heart Rate", 86.05173178993036),
+        ("Height", 169.33463796477494),
+        ("Mean blood pressure", 78.61474847093386),
+        ("Oxygen saturation", 100.99360210904216),
+        ("Respiratory rate", 21.34307497701275),
+        ("Systolic blood pressure", 118.69927129942835),
+        ("Temperature", 36.96791995122653),
+        ("Weight", 84.91834694253167),
+        ("pH", 130.70163154775614),
+    ]
+)
+

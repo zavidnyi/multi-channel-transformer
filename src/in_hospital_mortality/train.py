@@ -25,6 +25,7 @@ parser.add_argument(
     choices=["simple_transformer", "multi_channel_transformer"],
 )
 parser.add_argument("--one_hot", type=bool, default=True)
+parser.add_argument("--normalize", type=bool, default=True)
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--max_epochs", type=int, default=100)
 parser.add_argument("--input_dim", type=int, default=48)
@@ -72,6 +73,8 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
                 num_layers=hparams.num_layers,
                 num_heads=hparams.num_heads,
                 dropout=hparams.dropout,
+                head_hidden_layers=hparams.head_hidden_layers,
+                head_hidden_dimension=hparams.head_hidden_dim,
             )
         else:
             self.model = MultiChannelTransformerClassifier(

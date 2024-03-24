@@ -7,18 +7,18 @@ from src.common.feed_forward import FeedForward
 
 
 class CrossChannelTransformerEncoderLayer(nn.Module):
-    def __init__(self, input_dimension, number_of_channels, number_of_heads):
+    def __init__(self, input_dimension, number_of_channels, number_of_heads, dropout):
         super(CrossChannelTransformerEncoderLayer, self).__init__()
         # same as regular TransformerEncoderLayer, but the values and keys depend on the output of the other channels
         self.sa = nn.MultiheadAttention(
-            input_dimension, number_of_heads, batch_first=True
+            input_dimension, number_of_heads, batch_first=True, dropout=dropout,
         )
         self.ffwd = FeedForward(
             input_dimension=input_dimension,
             hidden_dim=input_dimension,
             hidden_layers=0,
             output_dim=input_dimension,
-            dropout=0.1,
+            dropout=dropout,
         )
         self.agg = nn.ModuleList(
             [
@@ -39,7 +39,7 @@ class CrossChannelTransformerEncoderLayer(nn.Module):
 
 
 class MultiChannelTransformerEncoderLayer(nn.Module):
-    def __init__(self, number_of_channels, number_of_heads, channel_dimension):
+    def __init__(self, number_of_channels, number_of_heads, channel_dimension, dropout):
         super(MultiChannelTransformerEncoderLayer, self).__init__()
         # first for each channel apply regular transformer encoder layer
         # then for each channel apply cross-channel transformer encoder layer
@@ -51,6 +51,7 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
                         nhead=number_of_heads,
                         batch_first=True,
                         norm_first=True,
+                        dropout=dropout,
                     )
                 )
                 for _ in range(number_of_channels)
@@ -66,7 +67,7 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
             [
                 copy.deepcopy(
                     CrossChannelTransformerEncoderLayer(
-                        channel_dimension, number_of_channels, number_of_heads
+                        channel_dimension, number_of_channels, number_of_heads, dropout
                     )
                 )
                 for _ in range(number_of_channels)
@@ -113,16 +114,16 @@ class MultiChannelTransformerEncoder(nn.Module):
 
 class MultiChannelTransformerClassifier(nn.Module):
     def __init__(
-        self,
-        channel_dimension,
-        channel_hidden_dimension,
-        output_dim,
-        number_of_channels,
-        number_of_layers,
-        number_of_heads,
-        dropout=0.1,
-        head_hidden_layers=2,
-        head_hidden_dimension=512,
+            self,
+            channel_dimension,
+            channel_hidden_dimension,
+            output_dim,
+            number_of_channels,
+            number_of_layers,
+            number_of_heads,
+            dropout=0.1,
+            head_hidden_layers=2,
+            head_hidden_dimension=512,
     ):
         super(MultiChannelTransformerClassifier, self).__init__()
         self.channel_wise_embedding = nn.ModuleList(
@@ -135,7 +136,7 @@ class MultiChannelTransformerClassifier(nn.Module):
         )
         self.encoder = MultiChannelTransformerEncoder(
             MultiChannelTransformerEncoderLayer(
-                number_of_channels, number_of_heads, channel_hidden_dimension
+                number_of_channels, number_of_heads, channel_hidden_dimension, dropout=dropout,
             ),
             number_of_layers,
             channel_hidden_dimension,
@@ -168,7 +169,7 @@ class MultiChannelTransformerClassifier(nn.Module):
 
         x = self.encoder(x)
         x = x.squeeze(-1)
-        x = x[:, 0, :] # Take the last hidden state
+        x = x[:, 0, :]  # Take the last hidden state
         x = x.flatten(1)
         x = self.ffw(x)
         x = x.squeeze(-1)
