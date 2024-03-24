@@ -1,4 +1,7 @@
+import os
+import re
 from argparse import ArgumentParser
+from datetime import datetime
 
 import lightning as L
 import torch
@@ -10,11 +13,18 @@ from src.in_hospital_mortality.datamodule import InHospitalMortalityDataModule
 from src.multi_channel_transformer.multi_channel_transformer import (
     MultiChannelTransformerClassifier,
 )
+from src.sepsis.transformer_model import TransformerModel
 
 torch.manual_seed(6469)
 
 parser = ArgumentParser()
-parser.add_argument("--batch_size", type=int, default=32)
+parser.add_argument(
+    "--model",
+    type=str,
+    default="simple_transformer",
+    choices=["simple_transformer", "multi_channel_transformer"],
+)
+parser.add_argument("--batch_size", type=int, defalt=32)
 parser.add_argument("--max_epochs", type=int, default=100)
 parser.add_argument("--input_dim", type=int, default=48)
 parser.add_argument("--embed_dim", type=int, default=64)
@@ -28,6 +38,20 @@ parser.add_argument("--dropout", type=float, default=0.5)
 
 args = parser.parse_args()
 
+args.logdir = os.path.join(
+    "logs",
+    "{}-{}-{}".format(
+        os.path.basename(globals().get("__file__", "notebook")),
+        datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
+        ",".join(
+            (
+                "{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
+                for k, v in sorted(vars(args).items())
+            )
+        ),
+    ),
+)
+
 
 class LightningSimpleTransformerClassifier(L.LightningModule):
     def __init__(self, hparams):
@@ -37,29 +61,24 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         self.auroc = torchmetrics.classification.BinaryAUROC()
         self.recall = torchmetrics.classification.BinaryRecall()
         self.accuracy = torchmetrics.classification.BinaryAccuracy()
-        # self.model = torch.nn.LSTM(
-        #     input_size=hparams.input_dim,
-        #     hidden_size=hparams.embed_dim,
-        #     num_layers=hparams.num_layers,
-        #     batch_first=True,
-        # )
-        # self.model1 = torch.nn.Linear(hparams.embed_dim, hparams.output_dim)
-        # self.model = TransformerModel(
-        #     input_dim=hparams.input_dim,
-        #     embed_dim=hparams.embed_dim,
-        #     output_dim=hparams.output_dim,
-        #     num_layers=hparams.num_layers,
-        #     num_heads=hparams.num_heads,
-        #     dropout=hparams.dropout,
-        # )
-        self.model = MultiChannelTransformerClassifier(
-            channel_dimension=1,
-            channel_hidden_dimension=32,
-            output_dim=hparams.output_dim,
-            number_of_channels=hparams.input_dim,
-            number_of_layers=hparams.num_layers,
-            number_of_heads=hparams.num_heads,
-        )
+        if hparams.model == "simple_transformer":
+            self.model = TransformerModel(
+                input_dim=hparams.input_dim,
+                embed_dim=hparams.embed_dim,
+                output_dim=hparams.output_dim,
+                num_layers=hparams.num_layers,
+                num_heads=hparams.num_heads,
+                dropout=hparams.dropout,
+            )
+        else:
+            self.model = MultiChannelTransformerClassifier(
+                channel_dimension=1,
+                channel_hidden_dimension=32,
+                output_dim=hparams.output_dim,
+                number_of_channels=hparams.input_dim,
+                number_of_layers=hparams.num_layers,
+                number_of_heads=hparams.num_heads,
+            )
 
     def forward(self, x):
         return self.model(x)
@@ -128,8 +147,9 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
 classifier = LightningSimpleTransformerClassifier(args)
 trainer = L.Trainer(
     max_epochs=args.max_epochs,
-    default_root_dir="models/in_hospital_mortality_simple",
-    logger=TensorBoardLogger("models/in_hospital_mortality_simple"),
+    logger=TensorBoardLogger(
+        "models/in_hospital_mortality_simple", version=args.logdir
+    ),
 )
 datamodule = InHospitalMortalityDataModule(
     "data/in-hospital-mortality", args.batch_size
