@@ -16,15 +16,18 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
             dtype=str,
         )
         self.data_files = listfile[:, 0]
+        self.cache = {}
         self.targets = listfile[:, 1]
 
     def __len__(self):
-        return len(self.data_files)
+        return 753
 
     def __getitem__(self, idx):
         return self.process_data(idx)
 
     def process_data(self, index: int):
+        if index in self.cache:
+            return self.cache[index]
         episode = pd.read_csv(
             os.path.join(self.data_dir, self.data_files[index]),
         )
@@ -88,10 +91,12 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
             episode = one_hot_encode(episode, "Glascow coma scale verbal response", 6)
             episode = one_hot_encode(episode, "Glascow coma scale total", 16)
 
-        return (
+        data = (
             torch.tensor(episode.values, dtype=torch.float),
             torch.tensor(int(self.targets[index]), dtype=torch.float),
         )
+        self.cache[index] = data
+        return data
 
 
 def one_hot_encode(df, column, num_classes):
