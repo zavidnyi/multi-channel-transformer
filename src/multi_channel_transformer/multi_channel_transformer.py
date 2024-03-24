@@ -123,6 +123,9 @@ class MultiChannelTransformerClassifier(nn.Module):
         number_of_channels,
         number_of_layers,
         number_of_heads,
+        dropout=0.1,
+        head_hidden_layers=2,
+        head_hidden_dimension=512,
     ):
         super(MultiChannelTransformerClassifier, self).__init__()
         self.channel_wise_embedding = nn.ModuleList(
@@ -143,10 +146,10 @@ class MultiChannelTransformerClassifier(nn.Module):
         channel_input_dim = channel_hidden_dimension * number_of_channels
         self.ffw = FeedForward(
             input_dimension=channel_input_dim,
-            hidden_dim=channel_input_dim,
-            hidden_layers=0,
+            hidden_dim=head_hidden_dimension,
+            hidden_layers=head_hidden_layers,
             output_dim=output_dim,
-            dropout=0.1,
+            dropout=dropout,
         )
 
     def forward(self, x):
@@ -168,8 +171,8 @@ class MultiChannelTransformerClassifier(nn.Module):
 
         x = self.encoder(x)
         x = x.squeeze(-1)
-        x = x[:, 0, :]
+        x = x[:, 0, :] # Take the last hidden state
         x = x.flatten(1)
-        x = self.ffw(x)  # Take the last hidden state
+        x = self.ffw(x)
         x = x.squeeze(-1)
         return x

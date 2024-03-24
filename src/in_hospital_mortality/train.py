@@ -36,6 +36,8 @@ parser.add_argument("--lr", type=float, default=1e-4)
 parser.add_argument("--weight_decay", type=float, default=0.0)
 parser.add_argument("--pos_weight", type=float, default=2.0)
 parser.add_argument("--dropout", type=float, default=0.5)
+parser.add_argument("--head_hidden_layers", type=int, default=2)
+parser.add_argument("--head_hidden_dim", type=int, default=64)
 
 args = parser.parse_args()
 
@@ -74,11 +76,14 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         else:
             self.model = MultiChannelTransformerClassifier(
                 channel_dimension=1,
-                channel_hidden_dimension=32,
+                channel_hidden_dimension=hparams.embed_dim,
                 output_dim=hparams.output_dim,
                 number_of_channels=hparams.input_dim,
                 number_of_layers=hparams.num_layers,
                 number_of_heads=hparams.num_heads,
+                dropout=hparams.dropout,
+                head_hidden_layers=hparams.head_hidden_layers,
+                head_hidden_dimension=hparams.head_hidden_dim,
             )
 
     def forward(self, x):
