@@ -28,10 +28,6 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
             os.path.join(self.data_dir, self.data_files[index]),
         )
 
-        episode = episode[: min(48, len(episode))]
-
-        episode = episode.drop("Hours", axis=1)
-
         episode["Glascow coma scale eye opening"] = episode[
             "Glascow coma scale eye opening"
         ].map(gcs_eye_mapping)
@@ -45,10 +41,43 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
         ].map(gcs_verbal_mapping)
 
         episode["Glascow coma scale total"] = (
-                episode["Glascow coma scale eye opening"]
-                + episode["Glascow coma scale motor response"]
-                + episode["Glascow coma scale verbal response"]
+            episode["Glascow coma scale eye opening"]
+            + episode["Glascow coma scale motor response"]
+            + episode["Glascow coma scale verbal response"]
         )
+
+        # group measurements which occurred in the same hour
+        episode["Hours"] = np.floor(episode["Hours"]).astype(int)
+
+        continuous_column_names = [
+            column
+            for column in episode.columns
+            if column != "Capillary refill rate" and "Glascow coma scale" not in column
+        ]
+
+        categorical_column_names = [
+            column
+            for column in episode.columns
+            if column not in continuous_column_names
+        ]
+
+        aggregation_operations = {
+            column: "mean" for column in continuous_column_names
+        } | {column: "max" for column in categorical_column_names}
+
+        episode = (
+            episode.groupby("Hours").agg(aggregation_operations).reset_index(drop=True)
+        )
+
+        full_df = pd.DataFrame(index=range(48))
+
+        # Merge full_df with episode on "Hours"
+        episode = pd.merge(
+            full_df, episode, left_index=True, right_on="Hours", how="left"
+        )
+
+        # Set "Hours" as index again
+        episode.set_index("Hours", inplace=True)
 
         episode = episode.fillna(0)
 
@@ -57,12 +86,6 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
         episode = one_hot_encode(episode, "Glascow coma scale motor response", 7)
         episode = one_hot_encode(episode, "Glascow coma scale verbal response", 6)
         episode = one_hot_encode(episode, "Glascow coma scale total", 16)
-
-        if len(episode) < 48:
-            empty_measurements = pd.DataFrame(
-                0, index=range(48 - len(episode)), columns=episode.columns
-            )
-            episode = pd.concat([empty_measurements, episode])
 
         return (
             torch.tensor(episode.values, dtype=torch.float),
