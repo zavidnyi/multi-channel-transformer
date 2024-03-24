@@ -158,4 +158,3 @@ trainer.fit(
     model=classifier,
     datamodule=datamodule,
 )
-trainer.test(datamodule=datamodule)
