@@ -78,22 +78,19 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
         x = x.permute(
             2, 0, 1, 3
         )  # (channel, batch_size, seq_len, channel_dim) REVIEW: is this the correct permutation?
-        x_clone = x.clone()
-        x_clone_ = []
+        x_clone = []
         for i in range(len(self.channel_wise_self_encoder_layer)):
-            x_clone_.append(
-                self.channel_wise_ln[i](self.channel_wise_self_encoder_layer[i](x[i]))
-            )
-        x_clone = torch.stack(x_clone_)
+            x_clone.append(self.channel_wise_ln[i](self.channel_wise_self_encoder_layer[i](x[i])))
+        x = torch.stack(x_clone)
 
-        x_ = []
+        x_clone = []
         for i in range(len(self.cross_channel_encoder_layer)):
-            x_.append(
+            x_clone.append(
                 self.cross_channel_encoder_layer[i](
-                    x[i], [h for i, h in enumerate(x_clone) if i != i]
+                    x[i], [h for i, h in enumerate(x) if i != i]
                 )
             )
-        x = torch.stack(x_)
+        x = torch.stack(x_clone)
         x = x.permute(1, 2, 0, 3)
         return x
 
