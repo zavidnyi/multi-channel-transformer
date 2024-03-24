@@ -24,6 +24,7 @@ parser.add_argument(
     default="simple_transformer",
     choices=["simple_transformer", "multi_channel_transformer"],
 )
+parser.add_argument("--one_hot", type=bool, default=True)
 parser.add_argument("--batch_size", type=int, defalt=32)
 parser.add_argument("--max_epochs", type=int, default=100)
 parser.add_argument("--input_dim", type=int, default=48)
@@ -152,7 +153,7 @@ trainer = L.Trainer(
     ),
 )
 datamodule = InHospitalMortalityDataModule(
-    "data/in-hospital-mortality", args.batch_size
+    "data/in-hospital-mortality", args
 )
 trainer.fit(
     model=classifier,

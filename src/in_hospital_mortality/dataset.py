@@ -6,8 +6,9 @@ import torch.utils.data
 
 
 class InHospitalMortalityDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir: str, list_file_path: str):
+    def __init__(self, data_dir: str, list_file_path: str, one_hot: bool):
         self.data_dir = data_dir
+        self.one_hot = one_hot
         listfile = np.loadtxt(
             os.path.join(self.data_dir, list_file_path),
             delimiter=",",
@@ -80,12 +81,12 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
         episode.set_index("Hours", inplace=True)
 
         episode = episode.fillna(0)
-
-        episode = one_hot_encode(episode, "Capillary refill rate", 2)
-        episode = one_hot_encode(episode, "Glascow coma scale eye opening", 5)
-        episode = one_hot_encode(episode, "Glascow coma scale motor response", 7)
-        episode = one_hot_encode(episode, "Glascow coma scale verbal response", 6)
-        episode = one_hot_encode(episode, "Glascow coma scale total", 16)
+        if self.one_hot:
+            episode = one_hot_encode(episode, "Capillary refill rate", 2)
+            episode = one_hot_encode(episode, "Glascow coma scale eye opening", 5)
+            episode = one_hot_encode(episode, "Glascow coma scale motor response", 7)
+            episode = one_hot_encode(episode, "Glascow coma scale verbal response", 6)
+            episode = one_hot_encode(episode, "Glascow coma scale total", 16)
 
         return (
             torch.tensor(episode.values, dtype=torch.float),
