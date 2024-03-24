@@ -98,14 +98,14 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         outputs = self.model(inputs)
         loss = self.loss_fn(outputs, labels)
         outputs = torch.sigmoid(outputs)
-        self.log("train_loss", loss, on_epoch=True)
-        self.log("train_acc", self.accuracy(outputs, labels), on_epoch=True)
-        self.log("train_recall", self.recall(outputs, labels), on_epoch=True)
-        self.log("train_auc", self.auroc(outputs, labels), on_epoch=True)
+        self.log("train_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("train_acc", self.accuracy(outputs, labels), on_epoch=True, prog_bar=True)
+        self.log("train_recall", self.recall(outputs, labels), on_epoch=True, prog_bar=True)
+        self.log("train_auc", self.auroc(outputs, labels), on_epoch=True, prog_bar=True)
         aucpr = self.aucpr(outputs, labels.to(torch.int))
         if torch.isnan(aucpr).any():
             aucpr = 0.0
-        self.log("train_aucpr", aucpr, on_epoch=True)
+        self.log("train_aucpr", aucpr, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -113,28 +113,28 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         y_hat = self.model(x)
         loss = self.loss_fn(y_hat, y)
         y_hat = torch.sigmoid(y_hat)
-        self.log("val_loss", loss, on_epoch=True)
-        self.log("val_acc", self.accuracy(y_hat, y), on_epoch=True)
-        self.log("val_recall", self.recall(y_hat, y), on_epoch=True)
-        self.log("val_auc", self.auroc(y_hat, y), on_epoch=True)
+        self.log("val_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("val_acc", self.accuracy(y_hat, y), on_epoch=True, prog_bar=True)
+        self.log("val_recall", self.recall(y_hat, y), on_epoch=True, prog_bar=True)
+        self.log("val_auc", self.auroc(y_hat, y), on_epoch=True, prog_bar=True)
         aucpr = self.aucpr(y_hat, y.to(torch.int))
         if torch.isnan(aucpr).any():
             aucpr = 0.0
-        self.log("val_aucpr", aucpr, on_epoch=True)
+        self.log("val_aucpr", aucpr, on_epoch=True, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self.model(x)
         loss = self.loss_fn(y_hat, y)
         y_hat = torch.sigmoid(y_hat)
-        self.log("test_loss", loss, on_epoch=True)
-        self.log("test_acc", self.accuracy(y_hat, y), on_epoch=True)
-        self.log("test_recall", self.recall(y_hat, y), on_epoch=True)
-        self.log("test_auc", self.auroc(y_hat, y), on_epoch=True)
+        self.log("test_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("test_acc", self.accuracy(y_hat, y), on_epoch=True, prog_bar=True)
+        self.log("test_recall", self.recall(y_hat, y), on_epoch=True, prog_bar=True)
+        self.log("test_auc", self.auroc(y_hat, y), on_epoch=True, prog_bar=True)
         aucpr = self.aucpr(y_hat, y.to(torch.int))
         if torch.isnan(aucpr).any():
             aucpr = 0.0
-        self.log("test_aucpr", aucpr, on_epoch=True)
+        self.log("test_aucpr", aucpr, on_epoch=True, prog_bar=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
