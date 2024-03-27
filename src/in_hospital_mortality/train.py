@@ -106,18 +106,18 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         outputs = self.model(inputs)
         loss = self.loss_fn(outputs, labels)
         outputs = torch.sigmoid(outputs)
-        self.log("train_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("train_loss", loss, on_epoch=True, on_step=False, prog_bar=True)
         self.log(
-            "train_acc", self.accuracy(outputs, labels), on_epoch=True, prog_bar=True
+            "train_acc", self.accuracy(outputs, labels), on_epoch=True, on_step=False, prog_bar=True
         )
         self.log(
-            "train_recall", self.recall(outputs, labels), on_epoch=True, prog_bar=True
+            "train_recall", self.recall(outputs, labels), on_epoch=True, on_step=False, prog_bar=True
         )
-        self.log("train_auc", self.auroc(outputs, labels), on_epoch=True, prog_bar=True)
+        self.log("train_auc", self.auroc(outputs, labels), on_epoch=True, on_step=False, prog_bar=True)
         aucpr = self.aucpr(outputs, labels.to(torch.int))
         if torch.isnan(aucpr).any():
             aucpr = 0.0
-        self.log("train_aucpr", aucpr, on_epoch=True, prog_bar=True)
+        self.log("train_aucpr", aucpr, on_epoch=True, on_step=False, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -154,7 +154,13 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
             lr=self.hparams.lr,
             weight_decay=self.hparams.weight_decay,
         )
-        return optimizer
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, mode="min", factor=0.1, patience=10, verbose=True
+            ),
+            "monitor": "val_loss",
+        }
 
 
 classifier = LightningSimpleTransformerClassifier(args)
@@ -163,6 +169,14 @@ trainer = L.Trainer(
     logger=TensorBoardLogger(
         "models/in_hospital_mortality_simple", version=args.logdir
     ),
+    callbacks=[
+        L.pytorch.callbacks.ModelCheckpoint(
+            dirpath="models/in_hospital_mortality_simple",
+            filename="best",
+            monitor="val_loss",
+            mode="min",
+        )
+    ]
 )
 datamodule = InHospitalMortalityDataModule("data/in-hospital-mortality", args)
 trainer.fit(
