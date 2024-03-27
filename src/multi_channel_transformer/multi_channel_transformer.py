@@ -1,6 +1,7 @@
 import copy
 
 import torch
+from lightning.pytorch.demos.transformer import PositionalEncoding
 from torch import nn
 
 from src.common.feed_forward import FeedForward
@@ -11,7 +12,10 @@ class CrossChannelTransformerEncoderLayer(nn.Module):
         super(CrossChannelTransformerEncoderLayer, self).__init__()
         # same as regular TransformerEncoderLayer, but the values and keys depend on the output of the other channels
         self.sa = nn.MultiheadAttention(
-            input_dimension, number_of_heads, batch_first=True, dropout=dropout,
+            input_dimension,
+            number_of_heads,
+            batch_first=True,
+            dropout=dropout,
         )
         self.ffwd = FeedForward(
             input_dimension=input_dimension,
@@ -81,7 +85,9 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
         )  # (channel, batch_size, seq_len, channel_dim) REVIEW: is this the correct permutation?
         x_clone = []
         for i in range(len(self.channel_wise_self_encoder_layer)):
-            x_clone.append(self.channel_wise_ln[i](self.channel_wise_self_encoder_layer[i](x[i])))
+            x_clone.append(
+                self.channel_wise_ln[i](self.channel_wise_self_encoder_layer[i](x[i]))
+            )
         x = torch.stack(x_clone)
 
         x_clone = []
@@ -114,16 +120,16 @@ class MultiChannelTransformerEncoder(nn.Module):
 
 class MultiChannelTransformerClassifier(nn.Module):
     def __init__(
-            self,
-            channel_dimension,
-            channel_hidden_dimension,
-            output_dim,
-            number_of_channels,
-            number_of_layers,
-            number_of_heads,
-            dropout=0.1,
-            head_hidden_layers=2,
-            head_hidden_dimension=512,
+        self,
+        channel_dimension,
+        channel_hidden_dimension,
+        output_dim,
+        number_of_channels,
+        number_of_layers,
+        number_of_heads,
+        dropout=0.1,
+        head_hidden_layers=2,
+        head_hidden_dimension=512,
     ):
         super(MultiChannelTransformerClassifier, self).__init__()
         self.channel_wise_embedding = nn.ModuleList(
@@ -134,9 +140,13 @@ class MultiChannelTransformerClassifier(nn.Module):
                 for _ in range(number_of_channels)
             ]
         )
+        self.positional_encoding = PositionalEncoding(channel_hidden_dimension, dropout)
         self.encoder = MultiChannelTransformerEncoder(
             MultiChannelTransformerEncoderLayer(
-                number_of_channels, number_of_heads, channel_hidden_dimension, dropout=dropout,
+                number_of_channels,
+                number_of_heads,
+                channel_hidden_dimension,
+                dropout=dropout,
             ),
             number_of_layers,
             channel_hidden_dimension,
@@ -159,7 +169,11 @@ class MultiChannelTransformerClassifier(nn.Module):
         x = x.permute(2, 0, 1, 3)  # (channel, batch_size, seq_len, channel_dim)
         x_clone_ = []
         for i in range(len(self.channel_wise_embedding)):
-            x_clone_.append(self.channel_wise_embedding[i](x[i]))
+            encoded = self.channel_wise_embedding[i](x[i])
+            encoded_with_cls = torch.cat(
+                (encoded, torch.ones_like(encoded[:, :1])), dim=1
+            )
+            x_clone_.append(self.positional_encoding(encoded_with_cls))
         x = torch.stack(x_clone_)
 
         x = x.permute(1, 2, 0, 3)  # (batch_size, seq_len, channel, channel_dim)
