@@ -176,3 +176,20 @@ means = dict(
     ]
 )
 
+bin_ranges = {
+    # https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
+    'Systolic blood pressure': [120, 130, 140, 180],
+    'Diastolic blood pressure': [80, 90, 120],
+    'Fraction inspired oxygen': [0.21, 0.3, 0.4, 0.5,],
+    'Glucose': [70, 80, 90, 100, 110, 120],
+    'Heart rate': [50, 60, 70, 80, 90, 100, 120, 130, 140, 150, 160, 170, 180, 190, 200],
+    'Body height': [150, 160, 170, 180, 190],
+    # https://en.wikipedia.org/wiki/Mean_arterial_pressure
+    'Mean blood pressure': [90, 92, 96],
+    'Oxygen saturation': [92, 93, 94, 95, 96],
+    'Respiratory rate': [12, 18, 25],
+    'Temperature': [35, 36.5, 37.5, 38.3, 40, 41],
+    'Body weight': [60, 70, 80, 90, 100, 110, 120, 130, 140, 150],
+    'pH': [7.35, 7.4, 7.45, 7.5],
+}
+
