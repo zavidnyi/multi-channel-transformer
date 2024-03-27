@@ -24,7 +24,7 @@ parser.add_argument(
     default="simple_transformer",
     choices=["simple_transformer", "multi_channel_transformer"],
 )
-parser.add_argument("--one_hot", type=bool, default=True)
+parser.add_argument("--one_hot", action="store_true")
 parser.add_argument("--normalize", type=bool, default=True)
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--max_epochs", type=int, default=100)
@@ -107,8 +107,12 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         loss = self.loss_fn(outputs, labels)
         outputs = torch.sigmoid(outputs)
         self.log("train_loss", loss, on_epoch=True, prog_bar=True)
-        self.log("train_acc", self.accuracy(outputs, labels), on_epoch=True, prog_bar=True)
-        self.log("train_recall", self.recall(outputs, labels), on_epoch=True, prog_bar=True)
+        self.log(
+            "train_acc", self.accuracy(outputs, labels), on_epoch=True, prog_bar=True
+        )
+        self.log(
+            "train_recall", self.recall(outputs, labels), on_epoch=True, prog_bar=True
+        )
         self.log("train_auc", self.auroc(outputs, labels), on_epoch=True, prog_bar=True)
         aucpr = self.aucpr(outputs, labels.to(torch.int))
         if torch.isnan(aucpr).any():
@@ -160,9 +164,7 @@ trainer = L.Trainer(
         "models/in_hospital_mortality_simple", version=args.logdir
     ),
 )
-datamodule = InHospitalMortalityDataModule(
-    "data/in-hospital-mortality", args
-)
+datamodule = InHospitalMortalityDataModule("data/in-hospital-mortality", args)
 trainer.fit(
     model=classifier,
     datamodule=datamodule,
