@@ -6,7 +6,6 @@ from torch import nn
 
 from src.common.feed_forward import FeedForward
 
-
 class CrossChannelTransformerEncoderLayer(nn.Module):
     def __init__(self, input_dimension, number_of_channels, number_of_heads, dropout):
         super(CrossChannelTransformerEncoderLayer, self).__init__()
@@ -37,7 +36,7 @@ class CrossChannelTransformerEncoderLayer(nn.Module):
         for i, x_i in enumerate(other_channels_output):
             x_agg += self.agg[i](x_i)
         x = x + self.sa(x, x_agg, x_agg, need_weights=False)[0]
-        x = x + self.ln2(x)
+        x = self.ln2(x)
         x = x + self.ffwd(x)
         return x
 
@@ -94,7 +93,7 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
         for i in range(len(self.cross_channel_encoder_layer)):
             x_clone.append(
                 self.cross_channel_encoder_layer[i](
-                    x[i], [h for i, h in enumerate(x) if i != i]
+                    x[i], [h for j, h in enumerate(x) if i != j]
                 )
             )
         x = torch.stack(x_clone)
@@ -177,9 +176,6 @@ class MultiChannelTransformerClassifier(nn.Module):
         x = torch.stack(x_clone_)
 
         x = x.permute(1, 2, 0, 3)  # (batch_size, seq_len, channel, channel_dim)
-
-        classification_token = torch.ones_like(x[:, :1, :])
-        x = torch.cat((classification_token, x), dim=1)
 
         x = self.encoder(x)
         x = x.squeeze(-1)

@@ -25,7 +25,7 @@ parser.add_argument(
     choices=["simple_transformer", "multi_channel_transformer"],
 )
 parser.add_argument("--one_hot", action="store_true")
-parser.add_argument("--normalize", type=bool, default=True)
+parser.add_argument("--normalize", action="store_true")
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--max_epochs", type=int, default=100)
 parser.add_argument("--input_dim", type=int, default=48)
