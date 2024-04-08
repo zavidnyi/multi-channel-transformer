@@ -12,10 +12,26 @@ class InHospitalMortalityDataModule(L.LightningDataModule):
 
     def setup(self, stage: str) -> None:
         self.train_data = InHospitalMortalityDataset(
-            self.data_dir, "train_listfile.csv", self.hparams.one_hot, self.hparams.normalize
+            self.data_dir,
+            "train_listfile.csv",
+            self.hparams.one_hot,
+            self.hparams.normalize,
+            self.hparams.discretize,
         )
-        self.val_data = InHospitalMortalityDataset(self.data_dir, "val_listfile.csv", self.hparams.one_hot, self.hparams.normalize)
-        self.test_data = InHospitalMortalityDataset(self.data_dir, "test_listfile.csv", self.hparams.one_hot, self.hparams.normalize)
+        self.val_data = InHospitalMortalityDataset(
+            self.data_dir,
+            "val_listfile.csv",
+            self.hparams.one_hot,
+            self.hparams.normalize,
+            self.hparams.discretize,
+        )
+        self.test_data = InHospitalMortalityDataset(
+            self.data_dir,
+            "test_listfile.csv",
+            self.hparams.one_hot,
+            self.hparams.normalize,
+            self.hparams.discretize,
+        )
 
     def train_dataloader(self):
         return DataLoader(self.train_data, batch_size=self.hparams.batch_size)

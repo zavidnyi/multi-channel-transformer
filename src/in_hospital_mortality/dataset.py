@@ -6,7 +6,15 @@ import torch.utils.data
 
 
 class InHospitalMortalityDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir: str, list_file_path: str, one_hot: bool, normalize: bool):
+    def __init__(
+        self,
+        data_dir: str,
+        list_file_path: str,
+        one_hot: bool,
+        normalize: bool,
+        discretize: bool,
+    ):
+        self.discretize = discretize
         self.data_dir = data_dir
         self.one_hot = one_hot
         self.normalize = normalize
@@ -46,33 +54,68 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
         ].map(gcs_verbal_mapping)
 
         episode["Glascow coma scale total"] = (
-            episode["Glascow coma scale eye opening"]
-            + episode["Glascow coma scale motor response"]
-            + episode["Glascow coma scale verbal response"]
+            (
+                episode["Glascow coma scale eye opening"]
+                + episode["Glascow coma scale motor response"]
+                + episode["Glascow coma scale verbal response"]
+            )
+            .map(gcs_total_mapping)
+            .fillna(0)
         )
+
+        episode["Glascow coma scale eye opening"] = (
+            episode["Glascow coma scale eye opening"].fillna(0).astype(int)
+        )
+        episode["Glascow coma scale motor response"] = (
+            episode["Glascow coma scale motor response"].fillna(0).astype(int)
+        )
+        episode["Glascow coma scale verbal response"] = (
+            episode["Glascow coma scale verbal response"].fillna(0).astype(int)
+        )
+
+        episode["Capillary refill rate"] = (
+            episode["Capillary refill rate"]
+            .map(cap_refill_rate_mapping)
+            .fillna(0)
+            .astype(int)
+        )
+
+        if self.discretize:
+            for column, bin_range in bin_ranges.items():
+                episode[column] = np.digitize(episode[column].fillna(-1), bin_range)
 
         # group measurements which occurred in the same hour
         episode["Hours"] = np.floor(episode["Hours"]).astype(int)
 
-        continuous_column_names = [
-            column
-            for column in episode.columns
-            if column != "Capillary refill rate" and "Glascow coma scale" not in column
-        ]
+        if self.discretize:
 
-        categorical_column_names = [
-            column
-            for column in episode.columns
-            if column not in continuous_column_names
-        ]
+            def agg(column):
+                count = np.bincount(column[column != 0])
+                if count.size == 0:
+                    return 0
+                return np.argmax(count)
 
-        aggregation_operations = {
-            column: "mean" for column in continuous_column_names
-        } | {column: "max" for column in categorical_column_names}
+            # aggregation operations to take most occured class which is not zero
+            aggregation_operations = agg
+        else:
+            continuous_column_names = [
+                column
+                for column in episode.columns
+                if column != "Capillary refill rate"
+                and "Glascow coma scale" not in column
+            ]
 
-        episode = (
-            episode.groupby("Hours").agg(aggregation_operations).reset_index(drop=True)
-        )
+            categorical_column_names = [
+                column
+                for column in episode.columns
+                if column not in continuous_column_names
+            ]
+
+            aggregation_operations = {
+                column: "mean" for column in continuous_column_names
+            } | {column: "max" for column in categorical_column_names}
+
+        episode = episode.groupby("Hours", as_index=False).agg(aggregation_operations)
 
         full_df = pd.DataFrame(index=range(48))
 
@@ -84,18 +127,25 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
         # Set "Hours" as index again
         episode.set_index("Hours", inplace=True)
 
-        if self.normalize:
+        if self.normalize and not self.discretize:
             for column in episode.columns:
                 if column in means and column in stds:
                     episode[column] = (episode[column] - means[column]) / stds[column]
 
         episode = episode.fillna(0)
-        if self.one_hot:
+
+        if self.one_hot and not self.discretize:
             episode = one_hot_encode(episode, "Capillary refill rate", 2)
             episode = one_hot_encode(episode, "Glascow coma scale eye opening", 5)
             episode = one_hot_encode(episode, "Glascow coma scale motor response", 7)
             episode = one_hot_encode(episode, "Glascow coma scale verbal response", 6)
             episode = one_hot_encode(episode, "Glascow coma scale total", 16)
+
+        if self.discretize:
+            counter = 0
+            for column in episode.columns:
+                episode[column] += counter
+                counter += classes_per_column(column)
 
         data = (
             torch.tensor(episode.values, dtype=torch.float),
@@ -118,6 +168,20 @@ def one_hot_encode(df, column, num_classes):
     return df
 
 
+def classes_per_column(column: str) -> int:
+    if column == "Capillary refill rate":
+        return 3
+    if column == "Glascow coma scale eye opening":
+        return 5
+    if column == "Glascow coma scale motor response":
+        return 7
+    if column == "Glascow coma scale verbal response":
+        return 6
+    if column == "Glascow coma scale total":
+        return 14
+    return len(bin_ranges[column]) + 1
+
+
 gcs_eye_mapping = {
     "No Response": 1,
     "To Pain": 2,
@@ -138,6 +202,26 @@ gcs_motor_mapping = {
     "Flex-withdraws": 4,
     "Localizes Pain": 5,
     "Obeys Commands": 6,
+}
+gcs_total_mapping = {
+    "3": 1,
+    "4": 2,
+    "5": 3,
+    "6": 4,
+    "7": 5,
+    "8": 6,
+    "9": 7,
+    "10": 8,
+    "11": 9,
+    "12": 10,
+    "13": 11,
+    "14": 12,
+    "15": 13,
+}
+
+cap_refill_rate_mapping = {
+    "0": 1,
+    "1": 2,
 }
 
 stds = dict(
