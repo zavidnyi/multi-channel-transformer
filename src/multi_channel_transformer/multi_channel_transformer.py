@@ -18,7 +18,7 @@ class CrossChannelTransformerEncoderLayer(nn.Module):
         )
         self.ffwd = FeedForward(
             input_dimension=input_dimension,
-            hidden_dim=input_dimension,
+            hidden_dim=input_dimension*4,
             hidden_layers=0,
             output_dim=input_dimension,
             dropout=dropout,
@@ -32,9 +32,11 @@ class CrossChannelTransformerEncoderLayer(nn.Module):
         self.ln2 = nn.LayerNorm(input_dimension)
 
     def forward(self, x, other_channels_output):
-        x_agg = torch.zeros(x.shape).to(x.device)
+        x_agg = []
         for i, x_i in enumerate(other_channels_output):
-            x_agg += self.agg[i](x_i)
+            x_agg.append(self.agg[i](x_i))
+        x_agg = torch.stack(x_agg)
+        x_agg = torch.sum(x_agg, dim=0)
         x = x + self.sa(x, x_agg, x_agg, need_weights=False)[0]
         x = self.ln2(x)
         x = x + self.ffwd(x)
@@ -51,6 +53,7 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
                 copy.deepcopy(
                     nn.TransformerEncoderLayer(
                         d_model=channel_dimension,
+                        dim_feedforward=channel_dimension * 4,
                         nhead=number_of_heads,
                         batch_first=True,
                         norm_first=True,
@@ -77,11 +80,8 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
             ]
         )
 
-    # x is (batch_size, seq_len, channel, channel_dim)
+    # x is (channel, batch_size, seq_len, channel_dim)
     def forward(self, x):
-        x = x.permute(
-            2, 0, 1, 3
-        )  # (channel, batch_size, seq_len, channel_dim) REVIEW: is this the correct permutation?
         x_clone = []
         for i in range(len(self.channel_wise_self_encoder_layer)):
             x_clone.append(
@@ -97,7 +97,6 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
                 )
             )
         x = torch.stack(x_clone)
-        x = x.permute(1, 2, 0, 3)
         return x
 
 
@@ -110,9 +109,14 @@ class MultiChannelTransformerEncoder(nn.Module):
         self.norm = nn.LayerNorm(input_dimension)
 
     def forward(self, x):
+        x = x.permute(
+            2, 0, 1, 3
+        )  # (channel, batch_size, seq_len, channel_dim)
         "Pass the input (and mask) through each layer in turn."
         for layer in self.layers:
             x = layer(x)
+        x = x.permute(1, 2, 0, 3)  # (batch_size, seq_len, channel, channel_dim)
+        x = x.flatten(-2)
         x = self.norm(x)
         return x
 
@@ -140,6 +144,7 @@ class MultiChannelTransformerClassifier(nn.Module):
             ]
         )
         self.positional_encoding = PositionalEncoding(channel_hidden_dimension, dropout)
+        channel_input_dim = channel_hidden_dimension * number_of_channels
         self.encoder = MultiChannelTransformerEncoder(
             MultiChannelTransformerEncoderLayer(
                 number_of_channels,
@@ -148,9 +153,8 @@ class MultiChannelTransformerClassifier(nn.Module):
                 dropout=dropout,
             ),
             number_of_layers,
-            channel_hidden_dimension,
+            input_dimension=channel_input_dim,
         )
-        channel_input_dim = channel_hidden_dimension * number_of_channels
         self.ffw = FeedForward(
             input_dimension=channel_input_dim,
             hidden_dim=head_hidden_dimension,
@@ -178,7 +182,6 @@ class MultiChannelTransformerClassifier(nn.Module):
         x = x.permute(1, 2, 0, 3)  # (batch_size, seq_len, channel, channel_dim)
 
         x = self.encoder(x)
-        x = x.squeeze(-1)
         x = x[:, 0, :]  # Take the last hidden state
         x = x.flatten(1)
         x = self.ffw(x)

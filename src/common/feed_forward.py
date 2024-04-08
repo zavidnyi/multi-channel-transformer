@@ -11,7 +11,7 @@ class FeedForward(nn.Module):
         layers.append(nn.ReLU())
         layers.append(nn.Dropout(dropout))
 
-        for _ in range(hidden_layers - 1):
+        for _ in range(hidden_layers):
             layers.append(nn.Linear(hidden_dim, hidden_dim))
             layers.append(nn.ReLU())
             layers.append(nn.Dropout(dropout))
