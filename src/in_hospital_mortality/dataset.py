@@ -176,14 +176,101 @@ means = dict(
     ]
 )
 
+# first value in bin is the cutout values that we treat as missing value
 bin_ranges = {
     # https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings
-    'Systolic blood pressure': [120, 130, 140, 180],
-    'Diastolic blood pressure': [80, 90, 120],
-    'Fraction inspired oxygen': [0.21, 0.3, 0.4, 0.5,],
-    'Glucose': [70, 80, 90, 100, 110, 120],
-    'Heart rate': [50, 60, 70, 80, 90, 100, 120, 130, 140, 150, 160, 170, 180, 190, 200],
-    'Body height': [150, 160, 170, 180, 190],
+    # <0 941,842 instances
+    # 0-119 775,786 instnaces
+    # 120-129 204,999 instances
+    # 130-139 151,336 instances
+    # 140-179 205,956 instances
+    # >=180 12,336 instances
+    "Systolic blood pressure": [0, 120, 130, 140, 180],
+    # <0 942,208 instances
+    # 0-79 1,188,103 instances
+    # 80-89 95,648 instances
+    # 90-119 61,476 instances
+    # >=120 4,840 instances
+    "Diastolic blood pressure": [0, 80, 90, 120],
+    # Oxygen-enriched air has a higher FIO2 than 0.21; up to 1.00 which means 100% oxygen.
+    # FIO2 is typically maintained below 0.5 even with mechanical ventilation,
+    # to avoid oxygen toxicity, but there are applications when up to 100% is routinely used.
+    # https://en.wikipedia.org/wiki/Fraction_of_inspired_oxygen
+    # <0 2,124,492 instances
+    # <0.21 824 instances
+    # 0.21<0.3 880 instances
+    # 0.3<0.4 17,687 instances
+    # 0.4<0.5 55,093 instances
+    # 0.5<0.6 49,645 instances
+    # 0.6<0.7 13,784 instances
+    # 0.7<0.8 8,000 instances
+    # 0.8<0.9 4,652 instances
+    # 0.9<1.0 2,083 instances
+    # >=1.0 15,135 instances
+    "Fraction inspired oxygen": [
+        0,
+        0.21,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+    ],
+    # https://www.cdc.gov/diabetes/basics/getting-tested.html
+    # <0 1,984,546 instances
+    # 0<90 27,612 instances
+    # 90<100 23,040 instances
+    # 100<125 79,210 instances
+    # 125<140 43,496 instances
+    # 140<200 888,566 instances
+    # >=200 45,805 instances
+    "Glucose": [0, 90, 100, 125, 140, 200],
+     # <0 941,580
+    # 0<50 14,732
+    # 50<60 61,650
+    # 60<70 177,829
+    # 70<80 271,464
+    # 80<90 303,199
+    # 90<100 223,888
+    # 100<110 230,482
+    # 110<120 39,889
+    # 120<130 16,968,
+    # 130<140 6,335
+    # 140<150 2,603
+    # 150<160 987
+    # 160<170 377
+    # 170<180 149
+    # 180<190 73
+    # 190<200 70
+    "Heart Rate": [
+        0,
+        50,
+        60,
+        70,
+        80,
+        90,
+        100,
+        120,
+        130,
+        140,
+        150,
+        160,
+        170,
+        180,
+        190,
+        200,
+    ],
+    # <0 2,291,764
+    # 0<150 9
+    # 150<160 83
+    # 160<170 148
+    # 170<180 168
+    # 180<190 96
+    # >=190 7
+    "Height": [0, 150, 160, 170, 180, 190],
     # https://en.wikipedia.org/wiki/Mean_arterial_pressure
     'Mean blood pressure': [90, 92, 96],
     'Oxygen saturation': [92, 93, 94, 95, 96],
