@@ -10,7 +10,7 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from torch.nn import functional as F
 
 from src.common.transformer_model import TransformerModel
-from src.in_hospital_mortality.datamodule import InHospitalMortalityDataModule
+from src.mimic.datamodule import InHospitalMortalityDataModule
 from src.multi_channel_transformer.multi_channel_transformer import (
     MultiChannelTransformerClassifier,
 )

@@ -1,7 +1,7 @@
 import lightning as L
 from torch.utils.data import DataLoader
 
-from src.in_hospital_mortality.dataset import InHospitalMortalityDataset
+from src.mimic.dataset import InHospitalMortalityDataset
 
 
 class InHospitalMortalityDataModule(L.LightningDataModule):
