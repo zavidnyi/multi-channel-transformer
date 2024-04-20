@@ -29,7 +29,7 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
         self.targets = listfile[:, 1]
 
     def __len__(self):
-        return 753
+        return len(self.data_files)
 
     def __getitem__(self, idx):
         return self.process_data(idx)
@@ -146,10 +146,11 @@ class InHospitalMortalityDataset(torch.utils.data.Dataset):
             for column in episode.columns:
                 episode[column] += counter
                 counter += classes_per_column(column)
-
+        
+        t = torch.int if self.discretize else torch.float
         data = (
-            torch.tensor(episode.values, dtype=torch.float),
-            torch.tensor(int(self.targets[index]), dtype=torch.float),
+            torch.tensor(episode.values, dtype=t),
+            torch.tensor(int(self.targets[index]), dtype=torch.int64),
         )
         self.cache[index] = data
         return data

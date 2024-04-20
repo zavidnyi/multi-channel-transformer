@@ -34,10 +34,10 @@ class InHospitalMortalityDataModule(L.LightningDataModule):
         )
 
     def train_dataloader(self):
-        return DataLoader(self.train_data, batch_size=self.hparams.batch_size)
+        return DataLoader(self.train_data, batch_size=self.hparams.batch_size, num_workers=29)
 
     def val_dataloader(self):
-        return DataLoader(self.val_data, batch_size=self.hparams.batch_size)
+        return DataLoader(self.val_data, batch_size=self.hparams.batch_size, num_workers=1)
 
     def test_dataloader(self):
-        return DataLoader(self.test_data, batch_size=self.hparams.batch_size)
+        return DataLoader(self.test_data, batch_size=self.hparams.batch_size, num_workers=29)

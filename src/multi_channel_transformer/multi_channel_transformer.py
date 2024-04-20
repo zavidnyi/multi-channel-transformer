@@ -6,6 +6,7 @@ from torch import nn
 
 from src.common.feed_forward import FeedForward
 
+
 class CrossChannelTransformerEncoderLayer(nn.Module):
     def __init__(self, input_dimension, number_of_channels, number_of_heads, dropout):
         super(CrossChannelTransformerEncoderLayer, self).__init__()
@@ -18,28 +19,29 @@ class CrossChannelTransformerEncoderLayer(nn.Module):
         )
         self.ffwd = FeedForward(
             input_dimension=input_dimension,
-            hidden_dim=input_dimension*4,
+            hidden_dim=input_dimension * 4,
             hidden_layers=0,
             output_dim=input_dimension,
             dropout=dropout,
         )
-        self.agg = nn.ModuleList(
+        self.agg = nn.ParameterList(
             [
-                copy.deepcopy(nn.Linear(input_dimension, input_dimension, bias=False))
+                nn.Parameter(torch.zeros(input_dimension), requires_grad = True)
                 for _ in range(number_of_channels - 1)
             ]
         )
-        self.ln2 = nn.LayerNorm(input_dimension)
+        self.dropout = nn.Dropout(dropout)
+        self.ln = nn.LayerNorm(input_dimension)
 
     def forward(self, x, other_channels_output):
         x_agg = []
         for i, x_i in enumerate(other_channels_output):
-            x_agg.append(self.agg[i](x_i))
+            x_agg.append(torch.mul(x_i, self.agg[i]))
         x_agg = torch.stack(x_agg)
         x_agg = torch.sum(x_agg, dim=0)
-        x = x + self.sa(x, x_agg, x_agg, need_weights=False)[0]
-        x = self.ln2(x)
-        x = x + self.ffwd(x)
+        x = x + self.dropout(self.sa(x, x_agg, x_agg, need_weights=False)[0])
+        x = self.ln(x)
+        x = x + self.dropout(self.ffwd(x))
         return x
 
 
@@ -123,45 +125,32 @@ class MultiChannelTransformerEncoder(nn.Module):
 
 class MultiChannelTransformerClassifier(nn.Module):
     def __init__(
-        self,
-        channel_dimension,
-        channel_hidden_dimension,
-        output_dim,
-        number_of_channels,
-        number_of_layers,
-        number_of_heads,
-        dropout=0.1,
-        head_hidden_layers=2,
-        head_hidden_dimension=512,
+            self,
+            vocabulary_size,
+            embed_dim,
+            output_dim,
+            number_of_channels,
+            number_of_layers,
+            number_of_heads,
+            dropout=0.1,
     ):
         super(MultiChannelTransformerClassifier, self).__init__()
-        self.channel_wise_embedding = nn.ModuleList(
-            [
-                copy.deepcopy(
-                    nn.Linear(channel_dimension, channel_hidden_dimension, bias=False)
-                )
-                for _ in range(number_of_channels)
-            ]
+        self.embedding = nn.Embedding(
+            num_embeddings=vocabulary_size, embedding_dim=embed_dim
         )
-        self.positional_encoding = PositionalEncoding(channel_hidden_dimension, dropout)
-        channel_input_dim = channel_hidden_dimension * number_of_channels
+        self.positional_encoding = PositionalEncoding(embed_dim, dropout)
+        channel_input_dim = embed_dim * number_of_channels
         self.encoder = MultiChannelTransformerEncoder(
             MultiChannelTransformerEncoderLayer(
                 number_of_channels,
                 number_of_heads,
-                channel_hidden_dimension,
+                embed_dim,
                 dropout=dropout,
             ),
             number_of_layers,
             input_dimension=channel_input_dim,
         )
-        self.ffw = FeedForward(
-            input_dimension=channel_input_dim,
-            hidden_dim=head_hidden_dimension,
-            hidden_layers=head_hidden_layers,
-            output_dim=output_dim,
-            dropout=dropout,
-        )
+        self.linear = nn.Linear(channel_input_dim, output_dim)
 
     def forward(self, x):
         # x is (batch_size, seq_len, channels, channel_dim)
@@ -169,21 +158,23 @@ class MultiChannelTransformerClassifier(nn.Module):
             # in case channel dimension is one, we need to remap it 4 dimension manually
             x = x.unsqueeze(-1)
 
-        x = x.permute(2, 0, 1, 3)  # (channel, batch_size, seq_len, channel_dim)
-        x_clone_ = []
-        for i in range(len(self.channel_wise_embedding)):
-            encoded = self.channel_wise_embedding[i](x[i])
-            encoded_with_cls = torch.cat(
-                (encoded, torch.ones_like(encoded[:, :1])), dim=1
-            )
-            x_clone_.append(self.positional_encoding(encoded_with_cls))
-        x = torch.stack(x_clone_)
+        x = self.embedding(x)
+        x = x.flatten(-2)
+        classification_token = torch.ones_like(x[:, :1, :])
+        x = torch.cat((classification_token, x), dim=1)
 
+        x = x.permute(
+            2, 0, 1, 3
+        )  # (channel, batch_size, seq_len, channel_dim)
+        x_copy = []
+        for i in range(x.size(0)):
+            x_copy.append(self.positional_encoding(x[i]))
+        x = torch.stack(x_copy)
         x = x.permute(1, 2, 0, 3)  # (batch_size, seq_len, channel, channel_dim)
 
         x = self.encoder(x)
         x = x[:, 0, :]  # Take the last hidden state
         x = x.flatten(1)
-        x = self.ffw(x)
+        x = self.linear(x)
         x = x.squeeze(-1)
         return x

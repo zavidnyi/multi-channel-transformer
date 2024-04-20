@@ -16,6 +16,7 @@ from src.multi_channel_transformer.multi_channel_transformer import (
 from src.sepsis.transformer_model import TransformerModel
 
 torch.manual_seed(6469)
+torch.set_float32_matmul_precision('medium')
 
 parser = ArgumentParser()
 parser.add_argument(
@@ -31,7 +32,7 @@ parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--max_epochs", type=int, default=100)
 parser.add_argument("--input_dim", type=int, default=48)
 parser.add_argument("--embed_dim", type=int, default=64)
-parser.add_argument("--output_dim", type=int, default=1)
+parser.add_argument("--output_dim", type=int, default=2)
 parser.add_argument("--num_layers", type=int, default=6)
 parser.add_argument("--num_heads", type=int, default=1)
 parser.add_argument("--lr", type=float, default=1e-4)
@@ -79,26 +80,20 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
             )
         else:
             self.model = MultiChannelTransformerClassifier(
-                channel_dimension=1,
-                channel_hidden_dimension=hparams.embed_dim,
+                vocabulary_size=132,
+                embed_dim=hparams.embed_dim,
                 output_dim=hparams.output_dim,
                 number_of_channels=hparams.input_dim,
                 number_of_layers=hparams.num_layers,
                 number_of_heads=hparams.num_heads,
                 dropout=hparams.dropout,
-                head_hidden_layers=hparams.head_hidden_layers,
-                head_hidden_dimension=hparams.head_hidden_dim,
             )
 
     def forward(self, x):
         return self.model(x)
 
     def loss_fn(self, y_hat, y):
-        return F.binary_cross_entropy_with_logits(
-            y_hat,
-            y,
-            pos_weight=torch.tensor(self.hparams.pos_weight).to(self.device),
-        )
+        return F.cross_entropy(y_hat, y, label_smoothing=0.1)
 
     def training_step(self, batch, batch_idx):
         inputs, labels = batch
@@ -106,7 +101,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         # labels is (B, 0/1)
         outputs = self.model(inputs)
         loss = self.loss_fn(outputs, labels)
-        outputs = torch.sigmoid(outputs)
+        outputs = torch.softmax(outputs, dim=1)[:,1]
         self.log("train_loss", loss, on_epoch=True, on_step=False, prog_bar=True)
         self.log(
             "train_acc",
@@ -139,7 +134,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         x, y = batch
         y_hat = self.model(x)
         loss = self.loss_fn(y_hat, y)
-        y_hat = torch.sigmoid(y_hat)
+        y_hat = torch.softmax(y_hat,dim=1)[:,1]
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
         self.log("val_acc", self.accuracy(y_hat, y), on_epoch=True, prog_bar=True)
         self.log("val_recall", self.recall(y_hat, y), on_epoch=True, prog_bar=True)
@@ -153,7 +148,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         x, y = batch
         y_hat = self.model(x)
         loss = self.loss_fn(y_hat, y)
-        y_hat = torch.sigmoid(y_hat)
+        y_hat = torch.softmax(y_hat, dim=1)[:,1]
         self.log("test_loss", loss, on_epoch=True, prog_bar=True)
         self.log("test_acc", self.accuracy(y_hat, y), on_epoch=True, prog_bar=True)
         self.log("test_recall", self.recall(y_hat, y), on_epoch=True, prog_bar=True)
@@ -172,14 +167,15 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         return {
             "optimizer": optimizer,
             "lr_scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, mode="min", factor=0.1, patience=10, verbose=True
+                optimizer, mode="max", factor=0.1, patience=5, verbose=True
             ),
-            "monitor": "val_loss",
+            "monitor": "val_auc",
         }
 
 
 classifier = LightningSimpleTransformerClassifier(args)
 trainer = L.Trainer(
+    log_every_n_steps=12,
     max_epochs=args.max_epochs,
     logger=TensorBoardLogger(
         "models/in_hospital_mortality_simple", version=args.logdir
@@ -188,9 +184,14 @@ trainer = L.Trainer(
         L.pytorch.callbacks.ModelCheckpoint(
             dirpath="models/in_hospital_mortality_simple",
             filename="best",
-            monitor="val_loss",
-            mode="min",
-        )
+            monitor="val_auc",
+            mode="max",
+        ),
+        L.pytorch.callbacks.EarlyStopping(
+            monitor="val_auc",
+            patience=10,
+            mode="max",
+        ),
     ],
 )
 datamodule = InHospitalMortalityDataModule("data/in-hospital-mortality", args)
