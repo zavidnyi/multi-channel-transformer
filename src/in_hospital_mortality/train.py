@@ -9,11 +9,11 @@ import torchmetrics
 from lightning.pytorch.loggers import TensorBoardLogger
 from torch.nn import functional as F
 
+from src.common.transformer_model import TransformerModel
 from src.in_hospital_mortality.datamodule import InHospitalMortalityDataModule
 from src.multi_channel_transformer.multi_channel_transformer import (
     MultiChannelTransformerClassifier,
 )
-from src.sepsis.transformer_model import TransformerModel
 
 torch.manual_seed(6469)
 torch.set_float32_matmul_precision('medium')
