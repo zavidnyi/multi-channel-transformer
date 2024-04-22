@@ -23,7 +23,7 @@ if not os.path.exists(args.output_path):
     os.makedirs(args.output_path)
 
 sample_rate = 1.0
-shortest_length = 4.0
+length = 24.0
 eps = 1e-6
 output_dir = os.path.join(args.output_path)
 if not os.path.exists(output_dir):
@@ -71,7 +71,7 @@ for patient in tqdm(patients, desc="Iterating over patients in."):
 
             sample_times = np.arange(0.0, los + eps, sample_rate)
 
-            sample_times = list(filter(lambda x: x > shortest_length, sample_times))
+            sample_times = list(filter(lambda x: x == length, sample_times))
 
             # At least one measurement
             sample_times = list(filter(lambda x: x > event_times[0], sample_times))
