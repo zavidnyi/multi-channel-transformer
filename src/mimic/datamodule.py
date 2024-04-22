@@ -38,15 +38,18 @@ class MimicTimeSeriesDataModule(L.LightningDataModule):
 
     def train_dataloader(self):
         return DataLoader(
-            self.train_data, batch_size=self.hparams.batch_size, num_workers=29
+            self.train_data, batch_size=self.hparams.batch_size, num_workers=29,
+            persistent_workers=True
         )
 
     def val_dataloader(self):
         return DataLoader(
-            self.val_data, batch_size=self.hparams.batch_size, num_workers=1
+            self.val_data, batch_size=self.hparams.batch_size, num_workers=10,
+            persistent_workers=True
         )
 
     def test_dataloader(self):
         return DataLoader(
-            self.test_data, batch_size=self.hparams.batch_size, num_workers=29
+            self.test_data, batch_size=self.hparams.batch_size, num_workers=29,
+            persistent_workers=True
         )

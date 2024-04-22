@@ -66,7 +66,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         self.kappa = torchmetrics.classification.MulticlassCohenKappa(
             num_classes=9, weights="linear"
         )
-        self.loss_fn = torch.nn.CrossEntropyLoss()
+        self.loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
         if hparams.model == "simple_transformer":
             self.model = TransformerModel(
                 input_dim=hparams.input_dim,

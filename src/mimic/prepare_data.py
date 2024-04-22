@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+from pqdm.processes import pqdm
 
 from src.mimic.constants import (
     gcs_eye_mapping,
@@ -18,7 +18,7 @@ from src.mimic.constants import (
 from src.mimic.utils import one_hot_encode, classes_per_column
 
 
-def prepare_data(episode, discretize=False, normalize=False, one_hot=False):
+def prepare_data(episode, max_seq_len, discretize=False, normalize=False, one_hot=False):
     episode["Glascow coma scale eye opening"] = episode[
         "Glascow coma scale eye opening"
     ].map(gcs_eye_mapping)
@@ -33,9 +33,9 @@ def prepare_data(episode, discretize=False, normalize=False, one_hot=False):
 
     episode["Glascow coma scale total"] = (
         (
-            episode["Glascow coma scale eye opening"]
-            + episode["Glascow coma scale motor response"]
-            + episode["Glascow coma scale verbal response"]
+                episode["Glascow coma scale eye opening"]
+                + episode["Glascow coma scale motor response"]
+                + episode["Glascow coma scale verbal response"]
         )
         .map(gcs_total_mapping)
         .fillna(0)
@@ -89,10 +89,10 @@ def prepare_data(episode, discretize=False, normalize=False, one_hot=False):
         ]
 
         aggregation_operations = {
-            column: "mean" for column in continuous_column_names
-        } | {column: "max" for column in categorical_column_names}
+                                     column: "mean" for column in continuous_column_names
+                                 } | {column: "max" for column in categorical_column_names}
 
-    full_df = pd.DataFrame(index=range(episode["Hours"].max()))
+    full_df = pd.DataFrame(index=range(max_seq_len))
 
     episode = episode.groupby("Hours", as_index=False).agg(aggregation_operations)
 
@@ -136,15 +136,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str)
     parser.add_argument("--output", type=str)
+    parser.add_argument("--max_seq_len", type=int)
     parser.add_argument("--discretize", action="store_true")
     parser.add_argument("--normalize", action="store_true")
     parser.add_argument("--one_hot", action="store_true")
     args = parser.parse_args()
 
-    for file in tqdm(os.listdir(args.data)):
+
+    def do(file):
         if file.endswith("timeseries.csv"):
             episode = pd.read_csv(os.path.join(args.data, file))
             episode = prepare_data(
-                episode, args.discretize, args.normalize, args.one_hot
+                episode, args.max_seq_len, args.discretize, args.normalize, args.one_hot
             )
             episode.to_csv(os.path.join(args.output, file), index=False)
+
+
+    pqdm(os.listdir(args.data), do, n_jobs=29)

@@ -30,7 +30,7 @@ class MimicTimeSeriesDataset(torch.utils.data.Dataset):
         )
         self.data_files = listfile[:, 0]
         self.cache = {}
-        self.targets = listfile[:, 1]
+        self.targets = listfile[:, -1]
 
     def __len__(self):
         return len(self.data_files)
@@ -42,16 +42,13 @@ class MimicTimeSeriesDataset(torch.utils.data.Dataset):
         if index in self.cache:
             data = self.cache[index]
         else:
-            episode = pd.read_csv(
-                os.path.join(self.data_dir, self.data_files[index]),
+            data = pd.read_csv(
+                os.path.join(self.data_dir, "tokenized", self.data_files[index]),
             )
-            data = prepare_data(episode, self.discretize, self.normalize, self.one_hot)[
-                : self.max_seq_len
-            ]
             self.cache[index] = data
 
         t = torch.int if self.discretize else torch.float
         return (
             torch.tensor(data.values, dtype=t),
-            torch.tensor(int(self.targets[index]), dtype=torch.int64),
+            torch.tensor(float(self.targets[index]), dtype=torch.long),
         )
