@@ -5,12 +5,20 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from src.mimic.constants import gcs_eye_mapping, gcs_motor_mapping, gcs_verbal_mapping, gcs_total_mapping, \
-    cap_refill_rate_mapping, bin_ranges, means, stds
+from src.mimic.constants import (
+    gcs_eye_mapping,
+    gcs_motor_mapping,
+    gcs_verbal_mapping,
+    gcs_total_mapping,
+    cap_refill_rate_mapping,
+    bin_ranges,
+    means,
+    stds,
+)
 from src.mimic.utils import one_hot_encode, classes_per_column
 
 
-def process_data(episode, discretize=False, normalize=False, one_hot=False):
+def prepare_data(episode, discretize=False, normalize=False, one_hot=False):
     episode["Glascow coma scale eye opening"] = episode[
         "Glascow coma scale eye opening"
     ].map(gcs_eye_mapping)
@@ -25,9 +33,9 @@ def process_data(episode, discretize=False, normalize=False, one_hot=False):
 
     episode["Glascow coma scale total"] = (
         (
-                episode["Glascow coma scale eye opening"]
-                + episode["Glascow coma scale motor response"]
-                + episode["Glascow coma scale verbal response"]
+            episode["Glascow coma scale eye opening"]
+            + episode["Glascow coma scale motor response"]
+            + episode["Glascow coma scale verbal response"]
         )
         .map(gcs_total_mapping)
         .fillna(0)
@@ -58,6 +66,7 @@ def process_data(episode, discretize=False, normalize=False, one_hot=False):
     episode["Hours"] = np.floor(episode["Hours"]).astype(int)
 
     if discretize:
+
         def agg(column):
             count = np.bincount(column[column != 0])
             if count.size == 0:
@@ -70,8 +79,7 @@ def process_data(episode, discretize=False, normalize=False, one_hot=False):
         continuous_column_names = [
             column
             for column in episode.columns
-            if column != "Capillary refill rate"
-               and "Glascow coma scale" not in column
+            if column != "Capillary refill rate" and "Glascow coma scale" not in column
         ]
 
         categorical_column_names = [
@@ -81,17 +89,15 @@ def process_data(episode, discretize=False, normalize=False, one_hot=False):
         ]
 
         aggregation_operations = {
-                                     column: "mean" for column in continuous_column_names
-                                 } | {column: "max" for column in categorical_column_names}
+            column: "mean" for column in continuous_column_names
+        } | {column: "max" for column in categorical_column_names}
 
     full_df = pd.DataFrame(index=range(episode["Hours"].max()))
 
     episode = episode.groupby("Hours", as_index=False).agg(aggregation_operations)
 
     # Merge full_df with episode on "Hours"
-    episode = pd.merge(
-        full_df, episode, left_index=True, right_on="Hours", how="left"
-    )
+    episode = pd.merge(full_df, episode, left_index=True, right_on="Hours", how="left")
 
     # Set "Hours" as index again
     episode.set_index("Hours", inplace=True)
@@ -126,7 +132,7 @@ def process_data(episode, discretize=False, normalize=False, one_hot=False):
     return episode
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str)
     parser.add_argument("--output", type=str)
@@ -138,5 +144,7 @@ if __name__ == '__main__':
     for file in tqdm(os.listdir(args.data)):
         if file.endswith("timeseries.csv"):
             episode = pd.read_csv(os.path.join(args.data, file))
-            episode = process_data(episode, args.discretize, args.normalize, args.one_hot)
+            episode = prepare_data(
+                episode, args.discretize, args.normalize, args.one_hot
+            )
             episode.to_csv(os.path.join(args.output, file), index=False)

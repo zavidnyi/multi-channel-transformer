@@ -10,13 +10,13 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from torch.nn import functional as F
 
 from src.common.transformer_model import TransformerModel
-from src.mimic.datamodule import InHospitalMortalityDataModule
+from src.mimic.datamodule import MimicTimeSeriesDataModule
 from src.multi_channel_transformer.multi_channel_transformer import (
     MultiChannelTransformerClassifier,
 )
 
 torch.manual_seed(6469)
-torch.set_float32_matmul_precision('medium')
+torch.set_float32_matmul_precision("medium")
 
 parser = ArgumentParser()
 parser.add_argument(
@@ -101,7 +101,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         # labels is (B, 0/1)
         outputs = self.model(inputs)
         loss = self.loss_fn(outputs, labels)
-        outputs = torch.softmax(outputs, dim=1)[:,1]
+        outputs = torch.softmax(outputs, dim=1)[:, 1]
         self.log("train_loss", loss, on_epoch=True, on_step=False, prog_bar=True)
         self.log(
             "train_acc",
@@ -134,7 +134,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         x, y = batch
         y_hat = self.model(x)
         loss = self.loss_fn(y_hat, y)
-        y_hat = torch.softmax(y_hat,dim=1)[:,1]
+        y_hat = torch.softmax(y_hat, dim=1)[:, 1]
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
         self.log("val_acc", self.accuracy(y_hat, y), on_epoch=True, prog_bar=True)
         self.log("val_recall", self.recall(y_hat, y), on_epoch=True, prog_bar=True)
@@ -148,7 +148,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         x, y = batch
         y_hat = self.model(x)
         loss = self.loss_fn(y_hat, y)
-        y_hat = torch.softmax(y_hat, dim=1)[:,1]
+        y_hat = torch.softmax(y_hat, dim=1)[:, 1]
         self.log("test_loss", loss, on_epoch=True, prog_bar=True)
         self.log("test_acc", self.accuracy(y_hat, y), on_epoch=True, prog_bar=True)
         self.log("test_recall", self.recall(y_hat, y), on_epoch=True, prog_bar=True)
@@ -194,7 +194,7 @@ trainer = L.Trainer(
         ),
     ],
 )
-datamodule = InHospitalMortalityDataModule("data/in-hospital-mortality", args)
+datamodule = MimicTimeSeriesDataModule("data/in-hospital-mortality", args)
 trainer.fit(
     model=classifier,
     datamodule=datamodule,

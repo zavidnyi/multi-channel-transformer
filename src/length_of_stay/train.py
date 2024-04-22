@@ -6,12 +6,11 @@ from datetime import datetime
 import lightning as L
 import torch
 import torchmetrics
-from lightning.pytorch.loggers import TensorBoardLogger
-from torch.nn import functional as F
 import torchmetrics.classification
+from lightning.pytorch.loggers import TensorBoardLogger
 
 from src.common.transformer_model import TransformerModel
-from src.length_of_stay.datamodule import LengthOfStayDataModule
+from src.mimic.datamodule import MimicTimeSeriesDataModule
 from src.multi_channel_transformer.multi_channel_transformer import (
     MultiChannelTransformerClassifier,
 )
@@ -161,7 +160,7 @@ trainer = L.Trainer(
         ),
     ],
 )
-datamodule = LengthOfStayDataModule("data/length-of-stay", args)
+datamodule = MimicTimeSeriesDataModule("data/length-of-stay", args)
 trainer.fit(
     model=classifier,
     datamodule=datamodule,
