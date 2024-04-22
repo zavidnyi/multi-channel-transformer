@@ -14,6 +14,7 @@ class MimicTimeSeriesDataModule(L.LightningDataModule):
         self.train_data = MimicTimeSeriesDataset(
             self.data_dir,
             "train_listfile.csv",
+            self.hparams.max_seq_len,
             self.hparams.one_hot,
             self.hparams.normalize,
             self.hparams.discretize,
@@ -21,6 +22,7 @@ class MimicTimeSeriesDataModule(L.LightningDataModule):
         self.val_data = MimicTimeSeriesDataset(
             self.data_dir,
             "val_listfile.csv",
+            self.hparams.max_seq_len,
             self.hparams.one_hot,
             self.hparams.normalize,
             self.hparams.discretize,
@@ -28,6 +30,7 @@ class MimicTimeSeriesDataModule(L.LightningDataModule):
         self.test_data = MimicTimeSeriesDataset(
             self.data_dir,
             "test_listfile.csv",
+            self.hparams.max_seq_len,
             self.hparams.one_hot,
             self.hparams.normalize,
             self.hparams.discretize,

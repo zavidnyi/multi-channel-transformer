@@ -12,6 +12,7 @@ class MimicTimeSeriesDataset(torch.utils.data.Dataset):
         self,
         data_dir: str,
         list_file_path: str,
+        max_seq_len: int,
         one_hot: bool,
         normalize: bool,
         discretize: bool,
@@ -20,6 +21,7 @@ class MimicTimeSeriesDataset(torch.utils.data.Dataset):
         self.data_dir = data_dir
         self.one_hot = one_hot
         self.normalize = normalize
+        self.max_seq_len = max_seq_len
         listfile = np.loadtxt(
             os.path.join(self.data_dir, list_file_path),
             delimiter=",",
@@ -43,7 +45,9 @@ class MimicTimeSeriesDataset(torch.utils.data.Dataset):
             episode = pd.read_csv(
                 os.path.join(self.data_dir, self.data_files[index]),
             )
-            data = prepare_data(episode, self.discretize, self.normalize, self.one_hot)
+            data = prepare_data(episode, self.discretize, self.normalize, self.one_hot)[
+                : self.max_seq_len
+            ]
             self.cache[index] = data
 
         t = torch.int if self.discretize else torch.float

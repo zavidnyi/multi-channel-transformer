@@ -194,6 +194,7 @@ trainer = L.Trainer(
         ),
     ],
 )
+args.max_seq_len = 48
 datamodule = MimicTimeSeriesDataModule("data/in-hospital-mortality", args)
 trainer.fit(
     model=classifier,

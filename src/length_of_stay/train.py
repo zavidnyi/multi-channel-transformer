@@ -160,6 +160,7 @@ trainer = L.Trainer(
         ),
     ],
 )
+args.max_seq_len = 24
 datamodule = MimicTimeSeriesDataModule("data/length-of-stay", args)
 trainer.fit(
     model=classifier,
