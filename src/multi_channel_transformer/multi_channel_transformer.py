@@ -34,10 +34,9 @@ class CrossChannelTransformerEncoderLayer(nn.Module):
         self.ln = nn.LayerNorm(input_dimension)
 
     def forward(self, x, other_channels_output):
-        x_agg = []
-        for i, x_i in enumerate(other_channels_output):
-            x_agg.append(torch.mul(x_i, self.agg[i]))
-        x_agg = torch.stack(x_agg)
+        x_agg = torch.stack(
+            [torch.mul(x_i, self.agg[i]) for i, x_i in enumerate(other_channels_output)]
+        )
         x_agg = torch.sum(x_agg, dim=0)
         x = x + self.dropout(self.sa(x, x_agg, x_agg, need_weights=False)[0])
         x = self.ln(x)
@@ -46,40 +45,50 @@ class CrossChannelTransformerEncoderLayer(nn.Module):
 
 
 class MultiChannelTransformerEncoderLayer(nn.Module):
-    def __init__(self, number_of_channels, number_of_heads, channel_dimension, dropout):
+    def __init__(
+        self,
+        number_of_channels,
+        number_of_heads,
+        channel_dimension,
+        dropout,
+        use_common_channel_wise_encoder=False,
+    ):
         super(MultiChannelTransformerEncoderLayer, self).__init__()
         # first for each channel apply regular transformer encoder layer
         # then for each channel apply cross-channel transformer encoder layer
-        # self.channel_wise_self_encoder_layer = nn.ModuleList(
-        #     [
-        #         copy.deepcopy(
-        #             nn.TransformerEncoderLayer(
-        #                 d_model=channel_dimension,
-        #                 dim_feedforward=channel_dimension * 4,
-        #                 nhead=number_of_heads,
-        #                 batch_first=True,
-        #                 norm_first=True,
-        #                 dropout=dropout,
-        #             )
-        #         )
-        #         for _ in range(number_of_channels)
-        #     ]
-        # )
-        # self.channel_wise_ln = nn.ModuleList(
-        #     [
-        #         copy.deepcopy(nn.LayerNorm(channel_dimension))
-        #         for _ in range(number_of_channels)
-        #     ]
-        # )
-        self.self_encoder = nn.TransformerEncoderLayer(
-            d_model=channel_dimension,
-            dim_feedforward=channel_dimension * 4,
-            nhead=number_of_heads,
-            batch_first=True,
-            norm_first=True,
-            dropout=dropout,
-        )
-        self.ln = nn.LayerNorm(channel_dimension)
+        if use_common_channel_wise_encoder:
+            self.self_encoder = nn.TransformerEncoderLayer(
+                d_model=channel_dimension,
+                dim_feedforward=channel_dimension * 4,
+                nhead=number_of_heads,
+                batch_first=True,
+                norm_first=True,
+                dropout=dropout,
+            )
+            self.ln = nn.LayerNorm(channel_dimension)
+        else:
+            self.encoder = nn.ModuleList(
+                [
+                    copy.deepcopy(
+                        nn.TransformerEncoderLayer(
+                            d_model=channel_dimension,
+                            dim_feedforward=channel_dimension * 4,
+                            nhead=number_of_heads,
+                            batch_first=True,
+                            norm_first=True,
+                            dropout=dropout,
+                        )
+                    )
+                    for _ in range(number_of_channels)
+                ]
+            )
+            self.ln = nn.ModuleList(
+                [
+                    copy.deepcopy(nn.LayerNorm(channel_dimension))
+                    for _ in range(number_of_channels)
+                ]
+            )
+
         self.cross_channel_encoder_layer = nn.ModuleList(
             [
                 copy.deepcopy(
@@ -93,23 +102,20 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
 
     # x is (channel, batch_size, seq_len, channel_dim)
     def forward(self, x):
-        # x_clone = []
-        # for i in range(len(self.channel_wise_self_encoder_layer)):
-        #     x_clone.append(
-        #         self.channel_wise_ln[i](self.channel_wise_self_encoder_layer[i](x[i]))
-        #     )
-        # x = torch.stack(x_clone)
+        if self.self_encoder is nn.ModuleList:
+            x = torch.stack([self.ln[i](self.encoder[i](x[i])) for i in range(len(x))])
+        else:
+            x = torch.stack([self.ln(self.self_encoder(x[i])) for i in range(len(x))])
 
-        x = torch.stack([self.ln(self.self_encoder(x[i])) for i in range(len(x))])
-
-        x_clone = []
-        for i in range(len(self.cross_channel_encoder_layer)):
-            x_clone.append(
+        x = torch.stack(
+            [
                 self.cross_channel_encoder_layer[i](
                     x[i], [h for j, h in enumerate(x) if i != j]
                 )
-            )
-        x = torch.stack(x_clone)
+                for i in range(len(x))
+            ]
+        )
+
         return x
 
 
@@ -142,6 +148,7 @@ class MultiChannelTransformerClassifier(nn.Module):
         number_of_layers,
         number_of_heads,
         dropout=0.1,
+        use_common_channel_wise_encoder=False,
     ):
         super(MultiChannelTransformerClassifier, self).__init__()
         self.embedding = nn.Embedding(
@@ -155,6 +162,7 @@ class MultiChannelTransformerClassifier(nn.Module):
                 number_of_heads,
                 embed_dim,
                 dropout=dropout,
+                use_common_channel_wise_encoder=use_common_channel_wise_encoder,
             ),
             number_of_layers,
             input_dimension=channel_input_dim,
