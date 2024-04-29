@@ -9,13 +9,13 @@ from src.mimic.prepare_data import prepare_data
 
 class MimicTimeSeriesDataset(torch.utils.data.Dataset):
     def __init__(
-        self,
-        data_dir: str,
-        list_file_path: str,
-        max_seq_len: int,
-        one_hot: bool,
-        normalize: bool,
-        discretize: bool,
+            self,
+            data_dir: str,
+            list_file_path: str,
+            max_seq_len: int,
+            one_hot: bool,
+            normalize: bool,
+            discretize: bool,
     ):
         self.discretize = discretize
         self.data_dir = data_dir
@@ -43,8 +43,9 @@ class MimicTimeSeriesDataset(torch.utils.data.Dataset):
             data = self.cache[index]
         else:
             data = pd.read_csv(
-                os.path.join(self.data_dir, "tokenized", self.data_files[index]),
+                os.path.join(self.data_dir, self.data_files[index]),
             )
+            data = prepare_data(data, self.max_seq_len, self.discretize, self.normalize, self.one_hot)
             self.cache[index] = data
 
         t = torch.int if self.discretize else torch.float

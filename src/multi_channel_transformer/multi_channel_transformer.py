@@ -26,7 +26,7 @@ class CrossChannelTransformerEncoderLayer(nn.Module):
         )
         self.agg = nn.ParameterList(
             [
-                nn.Parameter(torch.zeros(input_dimension), requires_grad = True)
+                nn.Parameter(torch.ones(input_dimension), requires_grad=True)
                 for _ in range(number_of_channels - 1)
             ]
         )
@@ -50,27 +50,36 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
         super(MultiChannelTransformerEncoderLayer, self).__init__()
         # first for each channel apply regular transformer encoder layer
         # then for each channel apply cross-channel transformer encoder layer
-        self.channel_wise_self_encoder_layer = nn.ModuleList(
-            [
-                copy.deepcopy(
-                    nn.TransformerEncoderLayer(
-                        d_model=channel_dimension,
-                        dim_feedforward=channel_dimension * 4,
-                        nhead=number_of_heads,
-                        batch_first=True,
-                        norm_first=True,
-                        dropout=dropout,
-                    )
-                )
-                for _ in range(number_of_channels)
-            ]
+        # self.channel_wise_self_encoder_layer = nn.ModuleList(
+        #     [
+        #         copy.deepcopy(
+        #             nn.TransformerEncoderLayer(
+        #                 d_model=channel_dimension,
+        #                 dim_feedforward=channel_dimension * 4,
+        #                 nhead=number_of_heads,
+        #                 batch_first=True,
+        #                 norm_first=True,
+        #                 dropout=dropout,
+        #             )
+        #         )
+        #         for _ in range(number_of_channels)
+        #     ]
+        # )
+        # self.channel_wise_ln = nn.ModuleList(
+        #     [
+        #         copy.deepcopy(nn.LayerNorm(channel_dimension))
+        #         for _ in range(number_of_channels)
+        #     ]
+        # )
+        self.self_encoder = nn.TransformerEncoderLayer(
+            d_model=channel_dimension,
+            dim_feedforward=channel_dimension * 4,
+            nhead=number_of_heads,
+            batch_first=True,
+            norm_first=True,
+            dropout=dropout,
         )
-        self.channel_wise_ln = nn.ModuleList(
-            [
-                copy.deepcopy(nn.LayerNorm(channel_dimension))
-                for _ in range(number_of_channels)
-            ]
-        )
+        self.ln = nn.LayerNorm(channel_dimension)
         self.cross_channel_encoder_layer = nn.ModuleList(
             [
                 copy.deepcopy(
@@ -84,12 +93,16 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
 
     # x is (channel, batch_size, seq_len, channel_dim)
     def forward(self, x):
-        x_clone = []
-        for i in range(len(self.channel_wise_self_encoder_layer)):
-            x_clone.append(
-                self.channel_wise_ln[i](self.channel_wise_self_encoder_layer[i](x[i]))
-            )
-        x = torch.stack(x_clone)
+        # x_clone = []
+        # for i in range(len(self.channel_wise_self_encoder_layer)):
+        #     x_clone.append(
+        #         self.channel_wise_ln[i](self.channel_wise_self_encoder_layer[i](x[i]))
+        #     )
+        # x = torch.stack(x_clone)
+
+        x = torch.stack([
+            self.ln(self.self_encoder(x[i])) for i in range(len(x))
+        ])
 
         x_clone = []
         for i in range(len(self.cross_channel_encoder_layer)):
@@ -161,7 +174,7 @@ class MultiChannelTransformerClassifier(nn.Module):
         x = self.embedding(x)
         x = x.flatten(-2)
         classification_token = torch.ones_like(x[:, :1, :])
-        x = torch.cat((classification_token, x), dim=1)
+        x = torch.cat((x, classification_token), dim=1)
 
         x = x.permute(
             2, 0, 1, 3
@@ -173,7 +186,7 @@ class MultiChannelTransformerClassifier(nn.Module):
         x = x.permute(1, 2, 0, 3)  # (batch_size, seq_len, channel, channel_dim)
 
         x = self.encoder(x)
-        x = x[:, 0, :]  # Take the last hidden state
+        x = x[:, -1, :]  # Take the last hidden state
         x = x.flatten(1)
         x = self.linear(x)
         x = x.squeeze(-1)

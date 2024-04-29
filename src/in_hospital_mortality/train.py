@@ -25,6 +25,7 @@ parser.add_argument(
     default="simple_transformer",
     choices=["simple_transformer", "multi_channel_transformer"],
 )
+parser.add_argument("--test", action="store_true")
 parser.add_argument("--one_hot", action="store_true")
 parser.add_argument("--discretize", action="store_true")
 parser.add_argument("--normalize", action="store_true")
@@ -167,9 +168,9 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         return {
             "optimizer": optimizer,
             "lr_scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, mode="max", factor=0.1, patience=5, verbose=True
+                optimizer, mode="min", factor=0.1, patience=3, verbose=True
             ),
-            "monitor": "val_auc",
+            "monitor": "val_loss",
         }
 
 
@@ -184,19 +185,27 @@ trainer = L.Trainer(
         L.pytorch.callbacks.ModelCheckpoint(
             dirpath="models/in_hospital_mortality_simple",
             filename="best",
-            monitor="val_auc",
-            mode="max",
+            monitor="val_loss",
+            mode="min",
         ),
         L.pytorch.callbacks.EarlyStopping(
-            monitor="val_auc",
-            patience=10,
-            mode="max",
+            monitor="val_loss",
+            patience=5,
+            mode="min",
         ),
     ],
 )
 args.max_seq_len = 48
 datamodule = MimicTimeSeriesDataModule("data/in-hospital-mortality", args)
-trainer.fit(
-    model=classifier,
-    datamodule=datamodule,
-)
+
+if args.test:
+    trainer.test(
+        model=classifier,
+        datamodule=datamodule,
+        ckpt_path="models/in_hospital_mortality_simple/best-v54.ckpt",
+    )
+else:
+    trainer.fit(
+        model=classifier,
+        datamodule=datamodule,
+    )

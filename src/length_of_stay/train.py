@@ -25,6 +25,7 @@ parser.add_argument(
     default="simple_transformer",
     choices=["simple_transformer", "multi_channel_transformer"],
 )
+parser.add_argument("--test", action="store_true")
 parser.add_argument("--one_hot", action="store_true")
 parser.add_argument("--discretize", action="store_true")
 parser.add_argument("--normalize", action="store_true")
@@ -66,6 +67,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         self.kappa = torchmetrics.classification.MulticlassCohenKappa(
             num_classes=9, weights="linear"
         )
+        self.acc = torchmetrics.classification.MulticlassAccuracy(num_classes=9)
         self.loss_fn = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
         if hparams.model == "simple_transformer":
             self.model = TransformerModel(
@@ -102,8 +104,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         self.log(
             "train_kappa", self.kappa(outputs, labels), on_epoch=True, prog_bar=True
         )
-
-        del outputs
+        self.log("train_acc", self.acc(outputs, labels), on_epoch=True, prog_bar=True)
 
         return loss
 
@@ -115,6 +116,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         outputs = torch.softmax(outputs, dim=1)
         self.log("val_loss", loss, on_epoch=True, prog_bar=True)
         self.log("val_kappa", self.kappa(outputs, y), on_epoch=True, prog_bar=True)
+        self.log("val_acc", self.acc(outputs, y), on_epoch=True, prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
@@ -125,6 +127,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
 
         self.log("test_loss", loss, on_epoch=True, prog_bar=True)
         self.log("test_kappa", self.kappa(outputs, y), on_epoch=True, prog_bar=True)
+        self.log("test_acc", self.acc(outputs, y), on_epoch=True, prog_bar=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
@@ -135,7 +138,7 @@ class LightningSimpleTransformerClassifier(L.LightningModule):
         return {
             "optimizer": optimizer,
             "lr_scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer, mode="max", factor=0.1, patience=5, verbose=True
+                optimizer, mode="max", factor=0.1, patience=3, verbose=True
             ),
             "monitor": "val_kappa",
         }
@@ -155,14 +158,22 @@ trainer = L.Trainer(
         ),
         L.pytorch.callbacks.EarlyStopping(
             monitor="val_kappa",
-            patience=10,
+            patience=5,
             mode="max",
         ),
     ],
 )
 args.max_seq_len = 24
 datamodule = MimicTimeSeriesDataModule("data/length-of-stay", args)
-trainer.fit(
-    model=classifier,
-    datamodule=datamodule,
-)
+
+if args.test:
+    trainer.test(
+        model=classifier,
+        ckpt_path="models/length-of-stay/best-v33.ckpt",
+        datamodule=datamodule,
+    )
+else:
+    trainer.fit(
+        model=classifier,
+        datamodule=datamodule,
+    )
