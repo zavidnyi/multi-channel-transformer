@@ -87,7 +87,7 @@ for subject in tqdm(subjects, desc="Iterating over subjects"):
         # this mean that stay_id in events.csv is not the same as that of stays.csv for the same hadm_id
         # we drop all such events
         icustay_missing_in_stays += (
-                merged_df["stay_id"] != merged_df["stay_id_r"]
+            merged_df["stay_id"] != merged_df["stay_id_r"]
         ).sum()
         merged_df = merged_df[(merged_df["stay_id"] == merged_df["stay_id_r"])]
 

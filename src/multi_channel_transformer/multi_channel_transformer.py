@@ -100,9 +100,7 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
         #     )
         # x = torch.stack(x_clone)
 
-        x = torch.stack([
-            self.ln(self.self_encoder(x[i])) for i in range(len(x))
-        ])
+        x = torch.stack([self.ln(self.self_encoder(x[i])) for i in range(len(x))])
 
         x_clone = []
         for i in range(len(self.cross_channel_encoder_layer)):
@@ -124,9 +122,7 @@ class MultiChannelTransformerEncoder(nn.Module):
         self.norm = nn.LayerNorm(input_dimension)
 
     def forward(self, x):
-        x = x.permute(
-            2, 0, 1, 3
-        )  # (channel, batch_size, seq_len, channel_dim)
+        x = x.permute(2, 0, 1, 3)  # (channel, batch_size, seq_len, channel_dim)
         "Pass the input (and mask) through each layer in turn."
         for layer in self.layers:
             x = layer(x)
@@ -138,14 +134,14 @@ class MultiChannelTransformerEncoder(nn.Module):
 
 class MultiChannelTransformerClassifier(nn.Module):
     def __init__(
-            self,
-            vocabulary_size,
-            embed_dim,
-            output_dim,
-            number_of_channels,
-            number_of_layers,
-            number_of_heads,
-            dropout=0.1,
+        self,
+        vocabulary_size,
+        embed_dim,
+        output_dim,
+        number_of_channels,
+        number_of_layers,
+        number_of_heads,
+        dropout=0.1,
     ):
         super(MultiChannelTransformerClassifier, self).__init__()
         self.embedding = nn.Embedding(
@@ -176,9 +172,7 @@ class MultiChannelTransformerClassifier(nn.Module):
         classification_token = torch.ones_like(x[:, :1, :])
         x = torch.cat((x, classification_token), dim=1)
 
-        x = x.permute(
-            2, 0, 1, 3
-        )  # (channel, batch_size, seq_len, channel_dim)
+        x = x.permute(2, 0, 1, 3)  # (channel, batch_size, seq_len, channel_dim)
         x_copy = []
         for i in range(x.size(0)):
             x_copy.append(self.positional_encoding(x[i]))

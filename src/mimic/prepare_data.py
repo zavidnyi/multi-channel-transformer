@@ -18,7 +18,9 @@ from src.mimic.constants import (
 from src.mimic.utils import one_hot_encode, classes_per_column
 
 
-def prepare_data(episode, max_seq_len, discretize=False, normalize=False, one_hot=False):
+def prepare_data(
+    episode, max_seq_len, discretize=False, normalize=False, one_hot=False
+):
     episode["Glascow coma scale eye opening"] = episode[
         "Glascow coma scale eye opening"
     ].map(gcs_eye_mapping)
@@ -33,9 +35,9 @@ def prepare_data(episode, max_seq_len, discretize=False, normalize=False, one_ho
 
     episode["Glascow coma scale total"] = (
         (
-                episode["Glascow coma scale eye opening"]
-                + episode["Glascow coma scale motor response"]
-                + episode["Glascow coma scale verbal response"]
+            episode["Glascow coma scale eye opening"]
+            + episode["Glascow coma scale motor response"]
+            + episode["Glascow coma scale verbal response"]
         )
         .map(gcs_total_mapping)
         .fillna(0)
@@ -89,8 +91,8 @@ def prepare_data(episode, max_seq_len, discretize=False, normalize=False, one_ho
         ]
 
         aggregation_operations = {
-                                     column: "mean" for column in continuous_column_names
-                                 } | {column: "max" for column in categorical_column_names}
+            column: "mean" for column in continuous_column_names
+        } | {column: "max" for column in categorical_column_names}
 
     full_df = pd.DataFrame(index=range(max_seq_len))
 
@@ -142,7 +144,6 @@ if __name__ == "__main__":
     parser.add_argument("--one_hot", action="store_true")
     args = parser.parse_args()
 
-
     def do(file):
         if file.endswith("timeseries.csv"):
             episode = pd.read_csv(os.path.join(args.data, file))
@@ -150,6 +151,5 @@ if __name__ == "__main__":
                 episode, args.max_seq_len, args.discretize, args.normalize, args.one_hot
             )
             episode.to_csv(os.path.join(args.output, file), index=False)
-
 
     pqdm(os.listdir(args.data), do, n_jobs=29)
