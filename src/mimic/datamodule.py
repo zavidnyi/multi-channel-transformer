@@ -19,11 +19,13 @@ class MimicTimeSeriesDataModule(L.LightningDataModule):
     def dataset_with_listfile(self, listfile: str) -> MimicTimeSeriesDataset:
         return MimicTimeSeriesDataset(
             self.hparams.data_dir,
+            self.hparams.processed_data_dir,
             os.path.join(self.hparams.listfile_dir, listfile),
             self.hparams.max_seq_len,
             self.hparams.one_hot,
             self.hparams.normalize,
             self.hparams.discretize,
+            self.hparams.small
         )
 
     def train_dataloader(self):

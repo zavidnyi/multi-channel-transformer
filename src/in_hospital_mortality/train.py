@@ -25,6 +25,9 @@ parser.add_argument(
     choices=["simple_transformer", "multi_channel_transformer", "lstm"],
 )
 parser.add_argument("--test_checkpoint", type=str, default=None)
+parser.add_argument("--listfile_dir", type=str, default="data/in-hospital-mortality")
+parser.add_argument("--data_dir", type=str, default="data/in-hospital-mortality")
+parser.add_argument("--processed_data_dir", type=str, default=None)
 parser.add_argument("--small", action="store_true")
 parser.add_argument("--one_hot", action="store_true")
 parser.add_argument("--discretize", action="store_true")
@@ -34,14 +37,15 @@ parser.add_argument("--max_epochs", type=int, default=100)
 parser.add_argument("--input_dim", type=int, default=48)
 parser.add_argument("--embed_dim", type=int, default=64)
 parser.add_argument("--output_dim", type=int, default=2)
-parser.add_argument("--num_layers", type=int, default=6)
-parser.add_argument("--num_heads", type=int, default=1)
+parser.add_argument("--num_layers", type=int, default=4)
+parser.add_argument("--num_heads", type=int, default=4)
 parser.add_argument("--lr", type=float, default=1e-4)
 parser.add_argument("--weight_decay", type=float, default=0.0)
 parser.add_argument("--pos_weight", type=float, default=2.0)
 parser.add_argument("--dropout", type=float, default=0.5)
 parser.add_argument("--head_hidden_layers", type=int, default=2)
 parser.add_argument("--head_hidden_dim", type=int, default=64)
+parser.add_argument("--use_common_encoder", action="store_true")
 
 args = parser.parse_args()
 
@@ -91,6 +95,7 @@ class InHospitalMortalityClassifier(L.LightningModule):
                 number_of_layers=hparams.num_layers,
                 number_of_heads=hparams.num_heads,
                 dropout=hparams.dropout,
+                use_common_channel_wise_encoder=hparams.use_common_encoder
             )
         else:
             self.lstm = torch.nn.LSTM(

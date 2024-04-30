@@ -52,7 +52,7 @@ class MimicTimeSeriesDataset(torch.utils.data.Dataset):
             data = pd.read_csv(
                 os.path.join(self.data_dir, self.data_files[index]),
             )
-            if not self.data_in_dir_processed:
+            if self.data_in_dir_processed is None:
                 data = prepare_data(
                     data,
                     self.max_seq_len,

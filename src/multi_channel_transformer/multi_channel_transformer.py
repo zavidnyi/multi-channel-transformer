@@ -67,7 +67,7 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
             )
             self.ln = nn.LayerNorm(channel_dimension)
         else:
-            self.encoder = nn.ModuleList(
+            self.self_encoder = nn.ModuleList(
                 [
                     copy.deepcopy(
                         nn.TransformerEncoderLayer(
@@ -102,8 +102,8 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
 
     # x is (channel, batch_size, seq_len, channel_dim)
     def forward(self, x):
-        if self.self_encoder is nn.ModuleList:
-            x = torch.stack([self.ln[i](self.encoder[i](x[i])) for i in range(len(x))])
+        if isinstance(self.self_encoder, nn.ModuleList):
+            x = torch.stack([self.ln[i](self.self_encoder[i](x[i])) for i in range(len(x))])
         else:
             x = torch.stack([self.ln(self.self_encoder(x[i])) for i in range(len(x))])
 
@@ -167,6 +167,7 @@ class MultiChannelTransformerClassifier(nn.Module):
             number_of_layers,
             input_dimension=channel_input_dim,
         )
+        self.classification_token = nn.Parameter(torch.ones(embed_dim), requires_grad=True)
         self.linear = nn.Linear(channel_input_dim, output_dim)
 
     def forward(self, x):
@@ -177,14 +178,14 @@ class MultiChannelTransformerClassifier(nn.Module):
 
         x = self.embedding(x)
         x = x.flatten(-2)
-        classification_token = torch.ones_like(x[:, :1, :])
-        x = torch.cat((x, classification_token), dim=1)
+        x = torch.cat((x, self.classification_token.expand(x.size()[0], -1).unsqueeze(1).expand(-1,x.size()[2],-1).unsqueeze(1)), dim=1)
 
         x = x.permute(2, 0, 1, 3)  # (channel, batch_size, seq_len, channel_dim)
-        x_copy = []
-        for i in range(x.size(0)):
-            x_copy.append(self.positional_encoding(x[i]))
-        x = torch.stack(x_copy)
+        # x_copy = []
+        # for i in range(x.size(0)):
+        #     x_copy.append(self.positional_encoding(x[i]))
+        # x = torch.stack(x_copy)
+        x = torch.stack([self.positional_encoding(x[i]) for i in range(x.size(0))])
         x = x.permute(1, 2, 0, 3)  # (batch_size, seq_len, channel, channel_dim)
 
         x = self.encoder(x)
