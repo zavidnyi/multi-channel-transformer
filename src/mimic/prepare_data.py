@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from pqdm.processes import pqdm
+from pqdm.threads import pqdm
 
 from src.mimic.constants import (
     gcs_eye_mapping,
@@ -137,6 +137,7 @@ def prepare_data(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str)
+    parser.add_argument("--threads", type=int, default=3)
     parser.add_argument("--output", type=str)
     parser.add_argument("--max_seq_len", type=int)
     parser.add_argument("--discretize", action="store_true")
@@ -152,4 +153,4 @@ if __name__ == "__main__":
             )
             episode.to_csv(os.path.join(args.output, file), index=False)
 
-    pqdm(os.listdir(args.data), do, n_jobs=29)
+    pqdm(os.listdir(args.data), do, n_jobs=args.threads)
