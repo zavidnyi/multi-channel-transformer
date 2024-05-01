@@ -111,13 +111,6 @@ def prepare_data(
 
     episode = episode.fillna(0)
 
-    if normalize and not discretize:
-        for column in episode.columns:
-            if column in means and column in stds:
-                episode[column] = (episode[column] - means[column]) / stds[column]
-
-    episode = episode.fillna(0)
-
     if one_hot and not discretize:
         episode = one_hot_encode(episode, "Capillary refill rate", 2)
         episode = one_hot_encode(episode, "Glascow coma scale eye opening", 5)
