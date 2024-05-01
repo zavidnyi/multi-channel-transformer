@@ -16,6 +16,7 @@ from src.multi_channel_transformer.multi_channel_transformer import (
 )
 from lightning.pytorch import seed_everything
 
+
 def init_args():
     parser = ArgumentParser()
     parser.add_argument(
@@ -63,7 +64,7 @@ def init_args():
         ),
     )
 
-    return  args
+    return args
 
 
 class LengthOfStayClassifier(L.LightningModule):
@@ -154,10 +155,12 @@ class LengthOfStayClassifier(L.LightningModule):
             "monitor": "val_loss",
         }
 
+
 if __name__ == '__main__':
     args = init_args()
     seed_everything(args.seed)
     classifier = LengthOfStayClassifier(args)
+    time = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     trainer = L.Trainer(
         log_every_n_steps=12,
         max_epochs=args.max_epochs,
@@ -165,7 +168,7 @@ if __name__ == '__main__':
         callbacks=[
             L.pytorch.callbacks.ModelCheckpoint(
                 dirpath="models/length-of-stay",
-                filename="best",
+                filename=f"best_{args.model}_{time}",
                 monitor="val_loss",
                 mode="min",
             ),

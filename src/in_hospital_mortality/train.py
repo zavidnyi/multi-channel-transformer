@@ -53,9 +53,7 @@ def init_args():
 
     args = parser.parse_args()
 
-    args.logdir = os.path.join(
-        "logs",
-        "{}-{}-{}".format(
+    args.logdir = "{}-{}-{}".format(
             os.path.basename(globals().get("__file__", "notebook")),
             datetime.now().strftime("%Y-%m-%d_%H%M%S"),
             ",".join(
@@ -64,8 +62,7 @@ def init_args():
                     for k, v in sorted(vars(args).items())
                 )
             ),
-        ),
-    )
+        )
     return args
 
 
@@ -178,18 +175,18 @@ if __name__ == "__main__":
     args = init_args()
     seed_everything(args.seed)
     classifier = InHospitalMortalityClassifier(args)
+    time = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     trainer = L.Trainer(
-        accelerator="cpu",
         deterministic=True,
         log_every_n_steps=12,
         max_epochs=args.max_epochs,
         logger=TensorBoardLogger(
-            "models/in_hospital_mortality_simple", version=args.logdir
+            "models/in_hospital_mortality", version=args.logdir
         ),
         callbacks=[
             L.pytorch.callbacks.ModelCheckpoint(
-                dirpath="models/in_hospital_mortality_simple",
-                filename="best",
+                dirpath="models/in_hospital_mortality/",
+                filename=f"best_{args.model}_{time}",
                 monitor="val_loss",
                 mode="min",
             ),

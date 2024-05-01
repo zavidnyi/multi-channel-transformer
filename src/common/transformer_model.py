@@ -13,6 +13,7 @@ class TransformerModel(nn.Module):
         super(TransformerModel, self).__init__()
         self.embedding = nn.Embedding(input_dim, embed_dim)
         self.pos_encoding = PositionalEncoding(embed_dim, dropout)
+        self.classification_token = nn.Parameter(torch.ones((1, 1, embed_dim)), requires_grad=True)
         self.encoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(
                 d_model=embed_dim, nhead=num_heads, batch_first=True, dropout=dropout, dim_feedforward=embed_dim * 4
@@ -32,8 +33,7 @@ class TransformerModel(nn.Module):
 
         x = self.embedding(x)
 
-        classification_token = torch.ones_like(x[:, :1, :])
-        x = torch.cat((x, classification_token), dim=1)
+        x = torch.cat((x, self.classification_token.expand(x.size()[0], -1, -1)), dim=1)
 
         x = self.pos_encoding(x)
 
