@@ -18,7 +18,7 @@ class MimicTimeSeriesDataModule(L.LightningDataModule):
 
     def dataset_with_listfile(self, listfile: str) -> MimicTimeSeriesDataset:
         return MimicTimeSeriesDataset(
-            self.hparams.data_dir,
+            self.hparams.processed_data_dir if self.hparams.processed_data_dir is not None else self.hparams.data_dir,
             self.hparams.processed_data_dir,
             os.path.join(self.hparams.listfile_dir, listfile),
             self.hparams.max_seq_len,
