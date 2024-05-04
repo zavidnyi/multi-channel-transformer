@@ -192,7 +192,7 @@ if __name__ == "__main__":
             ),
             L.pytorch.callbacks.EarlyStopping(
                 monitor="val_loss",
-                patience=5,
+                patience=10,
                 mode="min",
             ),
         ],
