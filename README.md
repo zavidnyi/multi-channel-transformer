@@ -1,5 +1,9 @@
 # Transformer Architectures for Multi-Channel Data
 
+<p align="center">
+<img src="./img/multi-channel-transformer.svg"/>
+</p>
+
 ## Getting MIMIC-IV
 
 The MIMIC-IV dataset is available from PhysioNet. You can request access to the
