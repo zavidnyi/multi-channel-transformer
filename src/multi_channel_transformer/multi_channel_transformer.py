@@ -34,12 +34,17 @@ class CrossChannelTransformerEncoderLayer(nn.Module):
         self.ln = nn.LayerNorm(input_dimension)
 
     def forward(self, x, other_channels_output):
+        # aggregate the output of other channels
         x_agg = torch.stack(
             [torch.mul(x_i, self.agg[i]) for i, x_i in enumerate(other_channels_output)]
         )
         x_agg = torch.sum(x_agg, dim=0)
+
+        # multi-head attention + residual connection + norm
         x = x + self.dropout(self.sa(x, x_agg, x_agg, need_weights=False)[0])
         x = self.ln(x)
+
+        # feed forward + residual connection
         x = x + self.dropout(self.ffwd(x))
         return x
 
@@ -54,8 +59,7 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
         use_common_channel_wise_encoder=False,
     ):
         super(MultiChannelTransformerEncoderLayer, self).__init__()
-        # first for each channel apply regular transformer encoder layer
-        # then for each channel apply cross-channel transformer encoder layer
+        # Channel-wise encoder
         if use_common_channel_wise_encoder:
             self.self_encoder = nn.TransformerEncoderLayer(
                 d_model=channel_dimension,
@@ -89,6 +93,7 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
                 ]
             )
 
+        # Cross-channel encoder
         self.cross_channel_encoder_layer = nn.ModuleList(
             [
                 copy.deepcopy(
@@ -102,6 +107,7 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
 
     # x is (channel, batch_size, seq_len, channel_dim)
     def forward(self, x):
+        # if we have a channel-wise encoder for each channel, else we have one common channel-wise encoder
         if isinstance(self.self_encoder, nn.ModuleList):
             x = torch.stack(
                 [self.ln[i](self.self_encoder[i](x[i])) for i in range(len(x))]
@@ -131,7 +137,6 @@ class MultiChannelTransformerEncoder(nn.Module):
 
     def forward(self, x):
         x = x.permute(2, 0, 1, 3)  # (channel, batch_size, seq_len, channel_dim)
-        "Pass the input (and mask) through each layer in turn."
         for layer in self.layers:
             x = layer(x)
         x = x.permute(1, 2, 0, 3)  # (batch_size, seq_len, channel, channel_dim)
@@ -180,23 +185,23 @@ class MultiChannelTransformerClassifier(nn.Module):
             # in case channel dimension is one, we need to remap it 4 dimension manually
             x = x.unsqueeze(-1)
 
+
         x = self.embedding(x)
-        x = x.flatten(-2)
+        x = x.flatten(-2) # the embedding layer adds an extra dimension per each channel, we need to flatten it
         x = torch.cat(
             (x, self.classification_token.expand(x.size()[0], -1, -1, -1)), dim=1
-        )
+        ) # add a classification token to the end of each channels' sequence in a batch
 
+        # we need permutation to positionally encode each channel's sequence separately
         x = x.permute(2, 0, 1, 3)  # (channel, batch_size, seq_len, channel_dim)
-        # x_copy = []
-        # for i in range(x.size(0)):
-        #     x_copy.append(self.positional_encoding(x[i]))
-        # x = torch.stack(x_copy)
         x = torch.stack([self.positional_encoding(x[i]) for i in range(x.size(0))])
         x = x.permute(1, 2, 0, 3)  # (batch_size, seq_len, channel, channel_dim)
 
         x = self.encoder(x)
+
         x = x[:, -1, :]  # Take the last hidden state
-        x = x.flatten(1)
+
+        x = x.flatten(1) # join all cls tokens for item of a batch
         x = self.linear(x)
         x = x.squeeze(-1)
         return x
