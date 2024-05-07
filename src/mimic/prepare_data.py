@@ -122,6 +122,9 @@ def prepare_data(
         episode = one_hot_encode(episode, "Glascow coma scale verbal response", 6)
         episode = one_hot_encode(episode, "Glascow coma scale total", 16)
 
+    episode = episode.fillna(0)
+
+
     if discretize:
         counter = 0
         for column in episode.columns:

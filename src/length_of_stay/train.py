@@ -17,7 +17,6 @@ from src.multi_channel_transformer.multi_channel_transformer import (
 )
 
 
-
 def init_args():
     parser = ArgumentParser()
     parser.add_argument(
@@ -47,8 +46,8 @@ def init_args():
     parser.add_argument("--input_dim", type=int, default=48)
     parser.add_argument("--embed_dim", type=int, default=64)
     parser.add_argument("--output_dim", type=int, default=9)
-    parser.add_argument("--num_layers", type=int, default=6)
-    parser.add_argument("--num_heads", type=int, default=1)
+    parser.add_argument("--num_layers", type=int, default=4)
+    parser.add_argument("--num_heads", type=int, default=4)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--pos_weight", type=float, default=2.0)
@@ -170,6 +169,7 @@ if __name__ == '__main__':
     classifier = LengthOfStayClassifier(args)
     time = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     trainer = L.Trainer(
+        deterministic=True,
         log_every_n_steps=12,
         max_epochs=args.max_epochs,
         logger=TensorBoardLogger("models/length-of-stay", version=args.logdir),

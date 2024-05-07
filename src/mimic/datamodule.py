@@ -36,10 +36,9 @@ class MimicTimeSeriesDataModule(L.LightningDataModule):
         )
 
     def padding_collate_fn(self, batch):
-        if self.hparams.padding is None:
-            return batch
-
         inputs, labels = zip(*batch)
+        if self.hparams.padding is None:
+            return torch.stack(inputs), torch.tensor(labels)
 
         if self.hparams.padding == "numerical":
             inputs = torch.nn.utils.rnn.pad_sequence(
