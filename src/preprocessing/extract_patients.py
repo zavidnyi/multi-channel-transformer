@@ -100,6 +100,7 @@ if args.verbose:
 stays["age"] = stays["anchor_age"]
 stays = add_inunit_mortality_to_icustays(stays)
 stays = add_inhospital_mortality_to_icustays(stays)
+
 # does nothing, since neonates have been removed from the dataset in MIMIC-IV 2.0
 # https://mimic.mit.edu/docs/iv/about/changelog/#mimic-iv-v20
 # stays = filter_icustays_on_age(stays)
