@@ -54,27 +54,23 @@ for patient in tqdm(patients, desc="Iterating over patients in."):
                 print("\n\t(length of stay is missing)", patient, ts_filename)
                 continue
 
+            if los < length - eps:
+                continue
+
             ts_lines = tsfile.readlines()
             header = ts_lines[0]
             ts_lines = ts_lines[1:]
             event_times = [float(line.split(",")[0]) for line in ts_lines]
 
             ts_lines = [
-                line for (line, t) in zip(ts_lines, event_times) if -eps < t < los + eps
+                line for (line, t) in zip(ts_lines, event_times) if -eps < t < length + eps
             ]
-            event_times = [t for t in event_times if -eps < t < los + eps]
+            event_times = [t for t in event_times if -eps < t < length + eps]
 
             # no measurements in ICU
             if len(ts_lines) == 0:
                 print("\n\t(no events in ICU) ", patient, ts_filename)
                 continue
-
-            sample_times = np.arange(0.0, los + eps, sample_rate)
-
-            sample_times = list(filter(lambda x: x == length, sample_times))
-
-            # At least one measurement
-            sample_times = list(filter(lambda x: x > event_times[0], sample_times))
 
             output_ts_filename = patient + "_" + ts_filename
             with open(os.path.join(output_dir, output_ts_filename), "w") as outfile:
@@ -82,16 +78,15 @@ for patient in tqdm(patients, desc="Iterating over patients in."):
                 for line in ts_lines:
                     outfile.write(line)
 
-            for t in sample_times:
-                xty_triples.append(
-                    (
-                        output_ts_filename,
-                        t,
-                        np.digitize(
-                            los - t, [24, 48, 72, 96, 120, 144, 168, 336, np.inf]
-                        ),
-                    )
+            xty_triples.append(
+                (
+                    output_ts_filename,
+                    24,
+                    np.digitize(
+                        los - 24, [24, 48, 72, 96, 120, 144, 168, 336, np.inf]
+                    ),
                 )
+            )
 
 print("Number of created samples:", len(xty_triples))
 labels, counts = np.unique([y for x, t, y in xty_triples], return_counts=True)
