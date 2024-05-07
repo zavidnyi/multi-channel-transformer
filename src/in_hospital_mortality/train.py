@@ -124,10 +124,10 @@ class InHospitalMortalityClassifier(L.LightningModule):
         return self.generic_step(batch, batch_idx, "train")
 
     def validation_step(self, batch, batch_idx):
-        return self.generic_step(batch, batch_idx, "val")
+        self.generic_step(batch, batch_idx, "val")
 
     def test_step(self, batch, batch_idx):
-        return self.generic_step(batch, batch_idx, "test")
+        self.generic_step(batch, batch_idx, "test")
 
     def generic_step(self, batch, batch_idx, prefix):
         inputs, labels = batch
