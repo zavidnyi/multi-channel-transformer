@@ -64,45 +64,46 @@ def prepare_data(
         for column, bin_range in bin_ranges.items():
             episode[column] = np.digitize(episode[column].fillna(-1), bin_range)
 
-    # group measurements which occurred in the same hour
-    episode["Hours"] = np.floor(episode["Hours"]).astype(int)
+    if max_seq_len != -1:
+        # group measurements which occurred in the same hour
+        episode["Hours"] = np.floor(episode["Hours"]).astype(int)
 
-    if discretize:
+        if discretize:
 
-        def agg(column):
-            count = np.bincount(column[column != 0])
-            if count.size == 0:
-                return 0
-            return np.argmax(count)
+            def agg(column):
+                count = np.bincount(column[column != 0])
+                if count.size == 0:
+                    return 0
+                return np.argmax(count)
 
-        # aggregation operations to take most occured class which is not zero
-        aggregation_operations = agg
-    else:
-        continuous_column_names = [
-            column
-            for column in episode.columns
-            if column != "Capillary refill rate" and "Glascow coma scale" not in column
-        ]
+            # aggregation operations to take most occured class which is not zero
+            aggregation_operations = agg
+        else:
+            continuous_column_names = [
+                column
+                for column in episode.columns
+                if column != "Capillary refill rate" and "Glascow coma scale" not in column
+            ]
 
-        categorical_column_names = [
-            column
-            for column in episode.columns
-            if column not in continuous_column_names
-        ]
+            categorical_column_names = [
+                column
+                for column in episode.columns
+                if column not in continuous_column_names
+            ]
 
-        aggregation_operations = {
-            column: "mean" for column in continuous_column_names
-        } | {column: "max" for column in categorical_column_names}
+            aggregation_operations = {
+                column: "mean" for column in continuous_column_names
+            } | {column: "max" for column in categorical_column_names}
 
-    full_df = pd.DataFrame(index=range(max_seq_len))
+        full_df = pd.DataFrame(index=range(max_seq_len))
 
-    episode = episode.groupby("Hours", as_index=False).agg(aggregation_operations)
+        episode = episode.groupby("Hours", as_index=False).agg(aggregation_operations)
 
-    # Merge full_df with episode on "Hours"
-    episode = pd.merge(full_df, episode, left_index=True, right_on="Hours", how="left")
+        # Merge full_df with episode on "Hours"
+        episode = pd.merge(full_df, episode, left_index=True, right_on="Hours", how="left")
 
     # Set "Hours" as index again
-    episode.set_index("Hours", inplace=True)
+    episode.drop("Hours", axis=1, inplace=True)
 
     if normalize and not discretize:
         for column in episode.columns:

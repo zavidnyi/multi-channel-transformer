@@ -29,6 +29,13 @@ def init_args():
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--test_checkpoint", type=str, default=None)
+    parser.add_argument("--aggregate", action="store_true")
+    parser.add_argument(
+        "--padding",
+        type=str,
+        default=None,
+        choices=["numerical", "categorical"],
+    )
     parser.add_argument("--listfile_dir", type=str, default="data/in-hospital-mortality")
     parser.add_argument("--data_dir", type=str, default="data/in-hospital-mortality")
     parser.add_argument("--processed_data_dir", type=str, default=None)
@@ -197,7 +204,8 @@ if __name__ == "__main__":
             ),
         ],
     )
-    args.max_seq_len = 48
+    # only the hours we need are stored on disk, so we need to take all of the measurements
+    args.max_seq_len = 48 if args.aggregate else -1
     datamodule = MimicTimeSeriesDataModule("data/in-hospital-mortality", args)
     if args.test_checkpoint is not None:
         trainer.test(
