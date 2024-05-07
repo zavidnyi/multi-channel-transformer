@@ -21,14 +21,18 @@ class MimicTimeSeriesDataModule(L.LightningDataModule):
 
     def dataset_with_listfile(self, listfile: str) -> MimicTimeSeriesDataset:
         return MimicTimeSeriesDataset(
-            self.hparams.processed_data_dir if self.hparams.processed_data_dir is not None else self.hparams.data_dir,
+            (
+                self.hparams.processed_data_dir
+                if self.hparams.processed_data_dir is not None
+                else self.hparams.data_dir
+            ),
             self.hparams.processed_data_dir,
             os.path.join(self.hparams.listfile_dir, listfile),
             self.hparams.max_seq_len,
             self.hparams.one_hot,
             self.hparams.normalize,
             self.hparams.discretize,
-            self.hparams.small
+            self.hparams.small,
         )
 
     def padding_collate_fn(self, batch):
@@ -38,7 +42,9 @@ class MimicTimeSeriesDataModule(L.LightningDataModule):
         inputs, labels = zip(*batch)
 
         if self.hparams.padding == "numerical":
-            inputs = torch.nn.utils.rnn.pad_sequence(inputs, batch_first=True, padding_value=0)
+            inputs = torch.nn.utils.rnn.pad_sequence(
+                inputs, batch_first=True, padding_value=0
+            )
 
         if self.hparams.padding == "categorical":
             # pad sequences with empty rows of measurements
@@ -46,7 +52,15 @@ class MimicTimeSeriesDataModule(L.LightningDataModule):
             inputs = list(inputs)
             for i, x in enumerate(inputs):
                 if len(x) < max_len_in_batch:
-                    inputs[i] = torch.cat([x, self.empty_measurements_row.repeat(max_len_in_batch - len(x), 1)], dim=0)
+                    inputs[i] = torch.cat(
+                        [
+                            x,
+                            self.empty_measurements_row.repeat(
+                                max_len_in_batch - len(x), 1
+                            ),
+                        ],
+                        dim=0,
+                    )
             inputs = torch.stack(inputs)
 
         return inputs, torch.tensor(labels)

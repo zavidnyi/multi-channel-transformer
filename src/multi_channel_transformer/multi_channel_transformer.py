@@ -103,7 +103,9 @@ class MultiChannelTransformerEncoderLayer(nn.Module):
     # x is (channel, batch_size, seq_len, channel_dim)
     def forward(self, x):
         if isinstance(self.self_encoder, nn.ModuleList):
-            x = torch.stack([self.ln[i](self.self_encoder[i](x[i])) for i in range(len(x))])
+            x = torch.stack(
+                [self.ln[i](self.self_encoder[i](x[i])) for i in range(len(x))]
+            )
         else:
             x = torch.stack([self.ln(self.self_encoder(x[i])) for i in range(len(x))])
 
@@ -167,7 +169,9 @@ class MultiChannelTransformerClassifier(nn.Module):
             number_of_layers,
             input_dimension=channel_input_dim,
         )
-        self.classification_token = nn.Parameter(torch.ones((1, 1, number_of_channels, embed_dim)), requires_grad=True)
+        self.classification_token = nn.Parameter(
+            torch.ones((1, 1, number_of_channels, embed_dim)), requires_grad=True
+        )
         self.linear = nn.Linear(channel_input_dim, output_dim)
 
     def forward(self, x):
@@ -178,7 +182,9 @@ class MultiChannelTransformerClassifier(nn.Module):
 
         x = self.embedding(x)
         x = x.flatten(-2)
-        x = torch.cat((x, self.classification_token.expand(x.size()[0], -1, -1, -1)), dim=1)
+        x = torch.cat(
+            (x, self.classification_token.expand(x.size()[0], -1, -1, -1)), dim=1
+        )
 
         x = x.permute(2, 0, 1, 3)  # (channel, batch_size, seq_len, channel_dim)
         # x_copy = []

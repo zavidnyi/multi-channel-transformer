@@ -82,7 +82,8 @@ def prepare_data(
             continuous_column_names = [
                 column
                 for column in episode.columns
-                if column != "Capillary refill rate" and "Glascow coma scale" not in column
+                if column != "Capillary refill rate"
+                and "Glascow coma scale" not in column
             ]
 
             categorical_column_names = [
@@ -100,7 +101,9 @@ def prepare_data(
         episode = episode.groupby("Hours", as_index=False).agg(aggregation_operations)
 
         # Merge full_df with episode on "Hours"
-        episode = pd.merge(full_df, episode, left_index=True, right_on="Hours", how="left")
+        episode = pd.merge(
+            full_df, episode, left_index=True, right_on="Hours", how="left"
+        )
 
     # Set "Hours" as index again
     episode.drop("Hours", axis=1, inplace=True)

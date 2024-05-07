@@ -36,7 +36,9 @@ def init_args():
         default=None,
         choices=["numerical", "categorical"],
     )
-    parser.add_argument("--listfile_dir", type=str, default="data/in-hospital-mortality")
+    parser.add_argument(
+        "--listfile_dir", type=str, default="data/in-hospital-mortality"
+    )
     parser.add_argument("--data_dir", type=str, default="data/in-hospital-mortality")
     parser.add_argument("--processed_data_dir", type=str, default=None)
     parser.add_argument("--small", action="store_true")
@@ -61,15 +63,15 @@ def init_args():
     args = parser.parse_args()
 
     args.logdir = "{}-{}-{}".format(
-            os.path.basename(globals().get("__file__", "notebook")),
-            datetime.now().strftime("%Y-%m-%d_%H%M%S"),
-            ",".join(
-                (
-                    "{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
-                    for k, v in sorted(vars(args).items())
-                )
-            ),
-        )
+        os.path.basename(globals().get("__file__", "notebook")),
+        datetime.now().strftime("%Y-%m-%d_%H%M%S"),
+        ",".join(
+            (
+                "{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v)
+                for k, v in sorted(vars(args).items())
+            )
+        ),
+    )
     return args
 
 
@@ -104,7 +106,7 @@ class InHospitalMortalityClassifier(L.LightningModule):
                 number_of_layers=hparams.num_layers,
                 number_of_heads=hparams.num_heads,
                 dropout=hparams.dropout,
-                use_common_channel_wise_encoder=hparams.use_common_encoder
+                use_common_channel_wise_encoder=hparams.use_common_encoder,
             )
         else:
             self.lstm = torch.nn.LSTM(
@@ -155,7 +157,11 @@ class InHospitalMortalityClassifier(L.LightningModule):
             prog_bar=True,
         )
         self.log(
-            f"{prefix}_auc", self.auroc(outputs, labels), on_step=False, on_epoch=True, prog_bar=True
+            f"{prefix}_auc",
+            self.auroc(outputs, labels),
+            on_step=False,
+            on_epoch=True,
+            prog_bar=True,
         )
         aucpr = self.aucpr(outputs, labels.to(torch.int))
         if torch.isnan(aucpr).any():
@@ -187,9 +193,7 @@ if __name__ == "__main__":
         deterministic=True,
         log_every_n_steps=12,
         max_epochs=args.max_epochs,
-        logger=TensorBoardLogger(
-            "models/in_hospital_mortality", version=args.logdir
-        ),
+        logger=TensorBoardLogger("models/in_hospital_mortality", version=args.logdir),
         callbacks=[
             L.pytorch.callbacks.ModelCheckpoint(
                 dirpath="models/in_hospital_mortality/",
