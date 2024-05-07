@@ -7,6 +7,7 @@ import lightning as L
 import torch
 import torchmetrics
 import torchmetrics.classification
+from lightning.pytorch import seed_everything
 from lightning.pytorch.loggers import TensorBoardLogger
 
 from src.common.transformer_model import TransformerModel
@@ -14,7 +15,7 @@ from src.mimic.datamodule import MimicTimeSeriesDataModule
 from src.multi_channel_transformer.multi_channel_transformer import (
     MultiChannelTransformerClassifier,
 )
-from lightning.pytorch import seed_everything
+
 
 
 def init_args():
@@ -27,6 +28,13 @@ def init_args():
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--test_checkpoint", type=str, default=None)
+    parser.add_argument("--aggregate", action="store_true")
+    parser.add_argument(
+        "--padding",
+        type=str,
+        default=None,
+        choices=["numerical", "categorical"],
+    )
     parser.add_argument("--listfile_dir", type=str, default="data/length-of-stay")
     parser.add_argument("--data_dir", type=str, default="data/length-of-stay")
     parser.add_argument("--small", action="store_true")
@@ -179,7 +187,8 @@ if __name__ == '__main__':
             ),
         ],
     )
-    args.max_seq_len = 24
+    # only the hours we need are stored on disk, so we need to take all of the measurements
+    args.max_seq_len = 24 if args.aggregate else -1
     datamodule = MimicTimeSeriesDataModule("data/length-of-stay", args)
 
     if args.test_checkpoint is not None:
