@@ -227,3 +227,6 @@ bin_ranges = {
     # >=7.5 4,645
     "pH": [0, 7.35, 7.4, 7.45, 7.5],
 }
+
+# row of discretized empty measurements
+empty_measurements_row = [0, 3, 8, 19, 24, 31, 45, 51, 58, 75, 82, 87, 94, 100, 106, 114, 126]
