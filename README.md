@@ -72,3 +72,70 @@ python -m src.preprocessing.create_length_of_stay data/mimic/ data/length-of-sta
 For reproducibility, we share a listfiles, describing episodes used for training `train_listfile.csv`,
 validation `val_listfile.csv` and test `test_listfile.csv`.
 Listfiles are stored in `data/in-hospital-mortality/` and `data/length-of-stay/` directories.
+
+## Training
+
+All the models have been trained on three random seeds: `42`, `23456`, and `976`.
+
+After training the best model checkpoint is saved to file `best_<model_type>_<checkpoint>.ckpt` in
+the `models/<in_hospital_mortality/length_of_stay>` directory.
+You can evaluate the best checkpoint on the test set by passing `--test_checkpoint <path_to_checkpoint>` argument to the
+same command you used for training.
+
+Optionally, you can preprocess for each model by the following command:
+
+```bash
+python3 -m src.mimic.prepare_data --data <input_data_dir> --output <where_to_write_prepared_files> --max_seq_len <number of hours or -1 for unaggregated> <(--normalize --one_hot) or --discretize>````
+```
+
+Then you can pass the prepared data dir to use for training via `--processed_data_dir <path_to_prepared_data>` argument.
+
+### LSTM-based model:
+
+To train model on aggregated or unaggregated time series, pass `--aggregate` or `--padding numerical` argument to the
+script.
+
+To train the LSTM-based model for in-hospital mortality prediction with best found parameters, run the following
+command:
+
+```bash
+python -m src.in_hospital_mortality.train --model lstm --input_dim 48 --embed_dim 16 --num_layers 1 --batch_size 64 --lr 0.001 --dropout 0.3 --output_dim 2 --normalize --one_hot --seed <your_seed> <--aggregate/ --padding numerical>
+```
+
+To train the LSTM-based model for length of stay prediction with best found parameters, run the following command:
+
+```bash
+python -m src.length_of_stay.train --model lstm --input_dim 48 --embed_dim 64 --num_layers 1 --batch_size 64 --lr 0.001 --dropout 0.3 --output_dim 9 --normalize --one_hot --seed <your_seed> <--aggregate/ --padding numerical>
+```
+
+### Simple Transformer:
+
+To train model on aggregated or unaggregated time series, pass `--aggregate` or `--padding categorical` argument to the
+script.
+
+
+```bash
+python -m src.in_hospital_mortality.train --model simple_transformer --input_dim 132 --embed_dim 32 --batch_size 64 --lr 0.001 --dropout 0.1 --output_dim 2 --discretize --seed <your_seed> <--aggregate/ --padding categorical>
+```
+
+To train the LSTM-based model for length of stay prediction with best found parameters, run the following command:
+
+```bash
+python -m src.in_hospital_mortality.train --model simple_transformer --input_dim 132 --embed_dim 32 --batch_size 64 --lr 0.001 --dropout 0.1 --output_dim 9 --discretize --seed <your_seed> <--aggregate/ --padding categorical>
+```
+
+### Multichannel Transformer:
+
+To train model on aggregated or unaggregated time series, pass `--aggregate` or `--padding categorical` argument to the
+script.
+
+
+```bash
+python -m src.in_hospital_mortality.train --model multi_channel_transformer --input_dim 17 --embed_dim 32 --batch_size 64 --lr 0.00005 --dropout 0.1 --output_dim 2 --discretize --seed <your_seed> <--aggregate/ --padding categorical>
+```
+
+To train the LSTM-based model for length of stay prediction with best found parameters, run the following command:
+
+```bash
+python -m src.in_hospital_mortality.train --model multi_channel_transformer --input_dim 17  --embed_dim 32 --batch_size 64 --lr 0.00005 --dropout 0.1 --output_dim 9 --discretize --seed <your_seed> <--aggregate/ --padding categorical>
+```
