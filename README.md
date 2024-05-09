@@ -4,7 +4,7 @@
 <img src="./img/multi-channel-transformer.svg"/>
 </p>
 
-## Getting MIMIC-IV
+## :hospital: Getting MIMIC-IV
 
 The MIMIC-IV dataset is available from PhysioNet. You can request access to the
 dataset [here](https://physionet.org/content/mimiciv/2.2/).
@@ -20,7 +20,7 @@ Note that the download may take a while, due to the slow upload speed of the ser
 For me it was 4 hours.
 See [this](https://github.com/MIT-LCP/mimic-code/issues/600) GitHub discussion.
 
-## Setup
+## :package: Setup
 
 Create a virtual environment and install the required packages:
 
@@ -30,7 +30,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Data Preprocessing
+## :hammer: Data Preprocessing
 
 Here are the required steps to build the benchmark.
 All the commands are run from the repository root.
@@ -73,7 +73,7 @@ For reproducibility, we share a listfiles, describing episodes used for training
 validation `val_listfile.csv` and test `test_listfile.csv`.
 Listfiles are stored in `data/in-hospital-mortality/` and `data/length-of-stay/` directories.
 
-## Training
+## :running: Training
 
 All the models have been trained on three random seeds: `42`, `23456`, and `976`.
 
