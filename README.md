@@ -4,6 +4,8 @@
 <img src="./img/multi-channel-transformer.svg"/>
 </p>
 
+## [Thesis Text](https://drive.google.com/file/d/1aJGdVEaT7G2ZZwqliAeD1MhwQ6IYCrB6)
+
 ## :hospital: Getting MIMIC-IV
 
 The MIMIC-IV dataset is available from PhysioNet. You can request access to the
